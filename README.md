@@ -4,6 +4,14 @@ This code adds functionality while saving (and using!) almost all of the old har
 
 ![Alt text](/images/demo.jpg?raw=true)
 
+##Greyscale
+
+This branch adds experiemental greyscale support. It looks like this...
+
+![Alt text](/images/greyscale.jpg?raw=true)
+
+In real life, it is too flickery to use at 1kHz update rate, but could be workable at higher rates. This at least proves the concept and shows a very memory efficient strategy that assigns colors by row. To have 4 levels per pixel would require an additional byte of RAM for each column. 
+
 ##Setup
 
 To make the brain transplant, 
@@ -37,3 +45,4 @@ The current driver code should work with any length display by changing the `#de
 Since all the rows are driven at once, it is possible that much longer displayes might max out the current carring ability of the darlinton current drivers or the wires connecting the displays to the controller ot each other. This should be easy enough to fix by just dithering the rows - although at the cost of lower update rate and brightness. 
 
 Current update rate is 1ms per row, so 7ms for full screen refresh. This leaves about 90% CPU free when running at 16mHz. There is likely at least 50% speedup possible though asm optimization of the update ISR should it ever be needed. Notes on this in the code. 
+
