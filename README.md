@@ -9,7 +9,7 @@ This code adds functionality while saving (and using!) almost all of the old har
 To make the brain transplant, 
 you remove the cpu (IC1) from the coltroler card and connect the pins from an Arduino like this...
 
-![Alt text](/images/CPU%20SOCKET%CONNECTIONS.jpg?raw=true)
+![Alt text](/images/CPU%20socket%20connections.jpg?raw=true)
 
 | Pin on CPU socket  | Arduino Pin  | Function | Notes |
 | :------------ |:---------------| :-----| :-----|
@@ -22,7 +22,13 @@ you remove the cpu (IC1) from the coltroler card and connect the pins from an Ar
 
 Note that pin 1 on the socket is the one closest to the "IC1" silk label. 
 
+##Stealing Digital Power
+
 You also must provide power to the digital circuits on the board. This ws previously connected using a second set of wires coming off the back of the board leading to a 7 VDC supply, but these are unnessisary since all the digital logic can run on 5 volts already present on the board for driving the LEDs. You can make that connection either by sending 5 VDC into pin 40 of the CPU socket, or by making a solder jump here on the back of the baord...
+
+![Alt text](/images/Digital%20Power%20Jump.jpg?raw=true)
+
+
 
 ##Operation
 
