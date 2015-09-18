@@ -26,3 +26,12 @@ Current code runs a demo loop. Video here...
 
 https://www.youtube.com/watch?v=ddl3uFbX3zA
 
+##Future
+
+The Arduino will be replaced with a daughter card that will sit in the 40 pin CPU socket. That board will probably carry an ATTINY and some kind of a wireless communication system so the display can be cued and reprogramed remotely. 
+
+The current driver code should work with any length display by changing the `#define COLS` line at the top. Note that most of the demo is hardcoded for an 18 char display so that wont work right on other sized displays.
+
+Since all the rows are driven at once, it is possible that much longer displayes might max out the current carring ability of the darlinton current drivers or the wires connecting the displays to the controller ot each other. This should be easy enough to fix by just dithering the rows - although at the cost of lower update rate and brightness. 
+
+Current update rate is 1ms per row, so 7ms for full screen refresh. This leaves about 90% CPU free when running at 16mHz. There is likely at least 50% speedup possible though asm optimization of the update ISR should it ever be needed. Notes on this in the code. 
