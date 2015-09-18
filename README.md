@@ -2,6 +2,8 @@
 Brain transplant for vintage Blue Man Group scrolling LED boards
 This code adds functionality while saving (and using!) almost all of the old hardware. 
 
+![Alt text](/images/demo.jpg?raw=true)
+
 ##Setup
 
 To make the brain transplant, 
