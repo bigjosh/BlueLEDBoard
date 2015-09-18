@@ -7,3 +7,10 @@ you remove the cpu (IC1) from the coltroler card and connect the pins from an Ar
 1 | 2 | 3
 - | - | -
 A | B | C
+
+| Left-Aligned  | Center Aligned  | Right Aligned |
+| :------------ |:---------------:| -----:|
+| col 3 is      | some wordy text | $1600 |
+| col 2 is      | centered        |   $12 |
+| zebra stripes | are neat        |    $1 |
+
