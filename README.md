@@ -11,8 +11,8 @@ you remove the cpu (IC1) from the coltroler card and connect the pins from an Ar
 | :------------ |:---------------| :-----| :-----|
 | 1-3      |  D8-D10 | Row Select Bits 0-2 | Row=0 the bottom row on the display. Row=7 does not select any row (used for shifting out cols). |
 | 4      | Ground  |   Row Select Bit 3 | The display only has 7 rows, so this bit can be tied LOW. You could also connect this to an outpin pin to be able to blank the display with a single bit since setting this to 1 would select a non-existant row no matter what the other row select bits are.)  |
-| 7 | D3 | Clock A        |   Note that the two clock signals are ANDed together, so you could use either or both  | 
-| 17 | 5V+ | Clock B | |
+| 7 | D3 | Clock A        |   Note that the two clock signals are ORed together, so you could use either or both  | 
+| 17 | Ground | Clock B | |
 | 32 | D4 | Data | 
 | 40 | 5V+ | Power | You can grab power form this pin to power the Arduino |
 
