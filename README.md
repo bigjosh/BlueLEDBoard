@@ -6,7 +6,7 @@ This code adds functionality while saving (and using!) almost all of the old har
 
 ##Greyscale
 
-This branch adds experiemental greyscale support. It looks like this...
+This branch adds experiemental greyscale support for 4 colors. It looks like this...
 
 ![Alt text](/images/greyscale.jpg?raw=true)
 
