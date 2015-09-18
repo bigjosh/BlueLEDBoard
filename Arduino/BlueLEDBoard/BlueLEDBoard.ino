@@ -16,54 +16,88 @@ uint8_t dots[ COLS ];   // Packed bits
                         // dot[0], bit 0 = upper rightmost LED
                         // dot[COLS-1], bit 7 = lower leftmost LED
 
-volatile uint8_t isr_row=0;  // Row to display on next update
 
 volatile uint8_t sync=0;  // if >0, then decremented after refresh so you can sync to it
 
+volatile uint8_t  dutyBits[256];        // Duty cycle data. 
+
+void setFullBrightnessDuty() {
+  
+  for(int i=0;i<256;i++) dutyBits[i]=0b01111111;
+  
+}
+
+void setRainbowDuty() {
+  
+  
+  for(int i=0;i<256;i++) dutyBits[i]= 0x00;
+   
+  for(int i=0;i<255;i+=1) dutyBits[i] |= _BV(0)  | _BV(6) ;
+  
+  for(int i=0;i<255;i+=2) dutyBits[i] |= _BV(1) | _BV(5);    // 50% for top and bottom rows
+  for(int i=0;i<255;i+=4) dutyBits[i] |= _BV(2) | _BV(4);
+  
+  for(int i=0;i<255;i+=5) dutyBits[i] |= _BV(3);    // middle
+  
+}
 
 
 // Interrupt is called once a millisecond to refresh the LED display
 SIGNAL(TIMER0_COMPA_vect) 
 {
   
-
- 
+  static uint8_t isr_row=0;    // Row to display on next update
+  static uint8_t isr_count=0;  // counter for PWMing rows 
+  static uint8_t dutyCount=0;          // counter cycles from 0-255. each bit in dutyBits[dutyCounter] is 1 if that row should be on at this point in the cycle. Must be 8 bits, rolls over at 255
+  
   uint8_t row_mask = 1 << isr_row;    // For quick bit testing
   
-  uint16_t c=COLS;
 
   PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit  
                    // Would be nice to leave the LEDs on while shifting out the cols but
                    // unfortunately then we'd display arifacts durring the shift
-
-  // Load up the col bits...
+                   
+  if ( dutyBits[dutyCount] & row_mask ) {      // No need to check dutyCount for overflow since it is only 8 bits it will wrap.
   
-  while (c--) {
+    // This loop could be hyperoptimized in ASM by
+    // *using a single byte loop counter
+    // *preloading rhe high and low bitfields into registers and then just picking which one to send 
+    // using boolean logic rather than a branch
     
-    if ( dots[c] & row_mask) {      // Current row,col set?
-         PORTD |= _BV( 4 );  // Set Data high      
-    } else {
-         PORTD &= ~_BV( 4 );  // Set Data low       
-    }
+    // Load up the col bits...
 
-    // Pulse clock      
-    PORTD |=   _BV(2);    // Clock high
-    PORTD &= ~_BV(2);     // Clock low
-        
+    uint16_t c=COLS;
+
+    while (c--) {
+      
+      if ( dots[c] & row_mask) {      // Current row,col set?
+           PORTD |= _BV( 4 ) ;  // Set Data high      
+      } else {
+           PORTD &= ~_BV( 4 );  // Set Data low       
+      }
+  
+      // Pulse clock      
+      PORTD |=   _BV(2);    // Clock high
+      PORTD &= ~_BV(2);     // Clock low
+          
+    }
+    
+    // turn on the row...
+    
+    PORTB = isr_row;
+    
+  }
+    
+  if (isr_row++ >= ROWS ) {
+    
+    isr_row=0;
+    dutyCount++;      // Just finished a full refresh, step to the next setting
+    
   }
   
-  // turn on the row...
-  
-  PORTB = isr_row;
   
   // get ready for next time...
-  
-  if (isr_row++ >= ROWS) {
     
-    isr_row = 0;
-    
-  }
-  
   if (sync) sync--;
   
 }
@@ -213,6 +247,8 @@ void allon() {
 
 void setup() {
   // put your setup code here, to run once:
+  
+    
   
   PORTB = 0x00;
   PORTD = 0x00;
@@ -454,6 +490,10 @@ void clear() {
   for(int c=0; c<COLS;c++) dots[c]=0x00;  // Clear screen  
 }
 
+// all on
+void fill() {
+  for(int c=0; c<COLS;c++) dots[c]=0xff;  // Fill screen  
+}
 
  #define STARS 10
   
@@ -550,6 +590,17 @@ void undrawalien( int x, int i, uint8_t open) {
 #define ALIENCOUNT 6
 
 void loop() {
+  
+  
+  setRainbowDuty();
+//  setFullBrightnessDuty();
+
+  fill();
+  
+  delay(2000);
+  
+  setFullBrightnessDuty();
+
   
   // Set up alien locations
     
