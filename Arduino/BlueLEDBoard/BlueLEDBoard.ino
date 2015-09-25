@@ -33,32 +33,42 @@ volatile uint8_t sync=0;  // if >0, then decremented after refresh so you can sy
 // Interrupt is called once a millisecond to refresh the LED display
 SIGNAL(TIMER0_COMPA_vect) 
 {
- 
+/*
+    int i=10;
+    while(i--) {
+      PORTB=0x0;
+      PORTB=0b00011000;
+    }
+    return;
+      
+*/
+
   uint8_t row_mask = 1 << isr_row;    // For quick bit testing
   
   uint16_t c=COLS;
 
-  PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit  
+  PORTD = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit  
                    // Would be nice to leave the LEDs on while shifting out the cols but
                    // unfortunately then we'd display arifacts durring the shift
 
-  // Load up the col bits...
+                   // Also sets clock and data low
 
+  // Load up the col bits...
   
   while (c--) {
 
-    PORTD &= ~_BV(2);     // Clock low    
+    PORTB &= ~_BV(3);     // Clock low    
     
     if ( dots[c] & row_mask) {      // Current row,col set?
-         PORTD |= _BV( 4 );  // Set Data high      
+         PORTB |= _BV( 4 );  // Set Data high      
     } else {
-         PORTD &= ~_BV( 4 );  // Set Data low       
+         PORTB &= ~_BV( 4 );  // Set Data low       
     }
     
     
     //asm("nop");
     
-    PORTD |=   _BV(2);    // Clock high
+    PORTB |=   _BV(3);    // Clock high
     
     //asm("nop");
 
@@ -67,13 +77,13 @@ SIGNAL(TIMER0_COMPA_vect)
     //asm("nop");
     
     
-    //asm("nop");      // Streching the clock seems ot help with long strings proabbly becuase of propigation delay thuogh the shift registers
+    //asm("nop");      // Streching the clock seems to help with long strings proabbly becuase of propigation delay thuogh the shift registers
             
   }
   
-  // turn on the row...
+  // turn on the row... (also sets clock and data low)
   
-  PORTB = isr_row;
+  PORTD = isr_row;
   
   // get ready for next time...
   
@@ -95,27 +105,6 @@ void setupTimer() {
 }
 
 
-
-/// set all row bits on
-void fullrow() {
-  
-  PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit
-  PORTD |= _BV( 4 );  // Set Data high
-    
-  for( int i=0; i<COLS; i++) {
-    
-      // Pulse clock
-      
-      PORTD |=   _BV(2);    // Clock high
-    //  delay(1);
-      PORTD &= ~_BV(2);     // Clock low
-    //  delay(1);  
-    
-  }
-  
-}
-
-
 void setup() {
   // put your setup code here, to run once:
   
@@ -123,11 +112,11 @@ void setup() {
   // https://learn.adafruit.com/introducing-trinket/16mhz-vs-8mhz-clock
   
   PORTB = 0x00;
-  PORTD = 0x00;
+ 
+  DDRB = 0b00011000;    // , 3=clock, 4=data
+  DDRD = 0b00000111;    // 0-2=row select
 
-  DDRB = 0x0f;                        // Set ROW select pins to output mode
-  DDRD = _BV(2) | _BV(3) | _BV(4);    // Set clock and data pins to output mode
-  
+
   setupTimer();
 }
 
@@ -457,16 +446,32 @@ void undrawalien( uint16_t x, uint8_t i, uint8_t open) {
 #define ALIENCOUNT 6
 
 void loop() {
+  
 
+  /*
   
+  // Testing code - flips dtata and clock as fast as possible.
+  // Use to check board compatibility (Trinket is NOT compatible becuase of pull-ups)
   
+    TIMSK |= _BV(OCIE0A);  // Turn off timer int
+
+    while(1) {
+      PORTB|=_BV(3);
+      PORTB&=~_BV(4);
+      PORTB&=~_BV(3);
+      PORTB|=_BV(4);
+    }
+ 
+   */
+
+   
   for( int s=0; s<(COLS+(13*6)); s++ ) {      // s=center of leftmost alien 
   
     clear();
     
     for( int a=0; a<6; a++) {        // Six aliens
     
-      drawalien( s + (a*13) , a&1 , (s+16)&32);
+      drawalien( s + (a*13) , a&1 , (s+8)&16);
     
     }
     
