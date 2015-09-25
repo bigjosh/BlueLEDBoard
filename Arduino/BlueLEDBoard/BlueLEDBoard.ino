@@ -171,6 +171,46 @@ void undrawship( int x, uint8_t y ) {
   
 }
 
+#define DIGIT5WIDTH 5
+#define DIGIT5HEIGHT 5
+
+const uint8_t digits5[][DIGIT5WIDTH] = {
+
+ {0x7c,0x4c,0x54,0x64,0x7c},
+ {0x10,0x30,0x10,0x10,0x38},            
+ {0x78,0x04,0x38,0x40,0x7c},            
+ {0x7c,0x04,0x38,0x04,0x7c},            
+ {0x40,0x40,0x50,0x7c,0x10},            
+ {0x7c,0x40,0x78,0x04,0x78},            
+ {0x7c,0x40,0x7c,0x44,0x7c},            
+ {0x7c,0x04,0x08,0x10,0x10},            
+ {0x7c,0x44,0x7c,0x44,0x7c},            
+ {0x7c,0x44,0x7c,0x04,0x7c},
+  
+};
+
+
+void drawdigit5( int center, int digit ) {
+
+   uint8_t w = DIGIT5WIDTH;
+
+   int x= center - (w/2);
+
+   for( uint8_t c=0; c<DIGIT5WIDTH; c++ ) {
+   
+    for( uint8_t r =0; r<DIGIT5HEIGHT; r++ ) {
+      
+        if (digits5[digit][r] & _BV((DIGIT5WIDTH-c)+1)) {
+          SETDOTP( x , r +2 ); 
+        }
+        
+    }
+
+    x++;
+    
+  }
+
+}
 // IMages from...
 /// http://cdn.instructables.com/FTR/8PSF/HCB8T24U/FTR8PSFHCB8T24U.LARGE.jpg
 
@@ -463,6 +503,36 @@ void loop() {
     }
  
    */
+
+  clear();
+
+  for (int s=1; s<COLS;s++ ){
+
+    if (s%5==0) {
+
+      SETDOTP( s , 0);
+
+    
+      if (s%10==0) {
+  
+        SETDOTP( s , 1);
+  
+        if (s%50==0) {
+  
+            SETDOTP( s , 2);
+  
+            drawdigit5( s-(DIGIT5WIDTH/2)-2 ,s/100 );
+            drawdigit5( s+(DIGIT5WIDTH/2)+2 ,s/10 % 10 );
+  
+        }
+  
+        
+      }
+  
+    }
+
+    delay(50);
+  }
 
    
   for( int s=0; s<(COLS+(13*6)); s++ ) {      // s=center of leftmost alien 
