@@ -9,8 +9,17 @@
 // COL DATA I7 on PD4. This bit will appear on DATA when ROW #7 is selected in ROW bits. 
 
 
+ #include <avr/power.h>        
+ 
+
 #define ROWS 7
-#define COLS (5*18)     // 5 rows per char, 100 chars
+#define COLS (5*84)     // 5 rows per char, 83 chars
+
+#if (COLS>=1000)
+
+  #error Too Many Cols!
+
+#endif
 
 uint8_t dots[ COLS ];   // Packed bits
                         // dot[0], bit 0 = upper rightmost LED
@@ -21,40 +30,60 @@ volatile uint8_t isr_row=0;  // Row to display on next update
 volatile uint8_t sync=0;  // if >0, then decremented after refresh so you can sync to it
 
 
-
 // Interrupt is called once a millisecond to refresh the LED display
 SIGNAL(TIMER0_COMPA_vect) 
 {
-  
+/*
+    int i=10;
+    while(i--) {
+      PORTB=0x0;
+      PORTB=0b00011000;
+    }
+    return;
+      
+*/
 
- 
   uint8_t row_mask = 1 << isr_row;    // For quick bit testing
   
   uint16_t c=COLS;
 
-  PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit  
+  PORTD = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit  
                    // Would be nice to leave the LEDs on while shifting out the cols but
                    // unfortunately then we'd display arifacts durring the shift
+
+                   // Also sets clock and data low
 
   // Load up the col bits...
   
   while (c--) {
+
+    PORTB &= ~_BV(3);     // Clock low    
     
     if ( dots[c] & row_mask) {      // Current row,col set?
-         PORTD |= _BV( 4 );  // Set Data high      
+         PORTB |= _BV( 4 );  // Set Data high      
     } else {
-         PORTD &= ~_BV( 4 );  // Set Data low       
+         PORTB &= ~_BV( 4 );  // Set Data low       
     }
+    
+    
+    //asm("nop");
+    
+    PORTB |=   _BV(3);    // Clock high
+    
+    //asm("nop");
 
     // Pulse clock      
-    PORTD |=   _BV(2);    // Clock high
-    PORTD &= ~_BV(2);     // Clock low
-        
+    
+    //asm("nop");
+    
+    
+    //asm("nop");      // Streching the clock seems to help with long strings proabbly becuase of propigation delay thuogh the shift registers
+            
   }
   
-  // turn on the row...
+  // turn on the row... (also sets clock and data low)
   
-  PORTB = isr_row;
+  PORTD = isr_row;
   
   // get ready for next time...
   
@@ -76,150 +105,18 @@ void setupTimer() {
 }
 
 
-
-/// set all row bits on
-void fullrow() {
-  
-  PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit
-  PORTD |= _BV( 4 );  // Set Data high
-    
-  for( int i=0; i<COLS; i++) {
-    
-      // Pulse clock
-      
-      PORTD |=   _BV(2);    // Clock high
-    //  delay(1);
-      PORTD &= ~_BV(2);     // Clock low
-    //  delay(1);  
-    
-  }
-  
-}
-
-
-void hwiped() {
-  
-  fullrow();
-  for( uint8_t r=0; r< ROWS; r++ ) {
-    PORTB=r;
-    delay(60);    
-  }
-  
-  PORTB=0x00;  
-}
-
-void hwipeu() {
-  
-  fullrow();
-  for( int r=ROWS; r>=0;  r-- ) {
-    PORTB=r;
-    delay(60);    
-  }
-  
-  PORTB=0x00;  
-}
-
-
-void vwiper() {
-  
-  
-  // step though the row to display...
-    
-  for( int s=COLS; s>0;  s-- ) {
-    
-    // Load up row bits...
-    
-    PORTB=0x07;  // Turn off rows to begin loading cols
-    
-    for( int c=0; c<COLS; c++) {
-
-     PORTD &= ~_BV(2);     // Clock low
-      
-       if (s==c) {          // Light this Row?
-         PORTD |= _BV( 4 );  // Set Data high
-       } else {
-         PORTD &= ~_BV( 4 );  // Set Data low       
-       }
-          
-       PORTD |=   _BV(2);    // Clock high - latch bit
-    
-    }
-
-    for( int l=0; l<2; l++ ) {    // Repeat the ROW scan this many times
-    
-      for( uint8_t r=0; r<ROWS; r++) {
-        
-        PORTB = r;      // Show the row
-        delay(1);       // Let it persist
-        
-      }
-    }  
-  }
-}
-
-void vwipel() {
-  
-  
-  // step though the row to display...
-    
-  for( int s=0; s<COLS;  s++ ) {
-    
-    // Load up row bits...
-    
-    PORTB=0x07;  // Turn off rows to begin loading cols
-    
-    for( int c=0; c<COLS; c++) {
-
-     PORTD &= ~_BV(2);     // Clock low
-      
-       if (s==c) {          // Light this Row?
-         PORTD |= _BV( 4 );  // Set Data high
-       } else {
-         PORTD &= ~_BV( 4 );  // Set Data low       
-       }
-          
-       PORTD |=   _BV(2);    // Clock high - latch bit
-    
-    }
-
-    for( int l=0; l<2; l++ ) {    // Repeat the ROW scan this many times
-    
-      for( uint8_t r=0; r<ROWS; r++) {
-        
-        PORTB = r;      // Show the row
-        delay(1);       // Let it persist
-        
-      }
-    }  
-  }
-}
-
-void allon() {
-  
-  fullrow();
-  
-  
-    for( int l=0; l<50; l++ ) {    // Repeat the ROW scan this many times
-    
-      for( uint8_t r=0; r<ROWS; r++) {
-        
-        PORTB = r;      // Show the row
-        delay(1);       // Let it persist
-        
-      }
-    }  
-  
-}
-
 void setup() {
   // put your setup code here, to run once:
   
-  PORTB = 0x00;
-  PORTD = 0x00;
-
-  DDRB = 0x0f;
-  DDRD = _BV(2) | _BV(3) | _BV(PD4);
+  if (F_CPU == 16000000) clock_prescale_set(clock_div_1);  // For trinket - switch to full speed 16mhz prescaler
+  // https://learn.adafruit.com/introducing-trinket/16mhz-vs-8mhz-clock
   
+  PORTB = 0x00;
+ 
+  DDRB = 0b00011000;    // , 3=clock, 4=data
+  DDRD = 0b00000111;    // 0-2=row select
+
+
   setupTimer();
 }
 
@@ -235,7 +132,7 @@ void setup() {
 #define CLRDOTP(c,r) if (c>=0 && c<COLS && r>=0 && r<ROWS) CLRDOT(c,r)
 
 
-void drawship( int x, int y, int j ) {
+void drawship( int x, uint8_t y, int j ) {
       
       for (int q=-1;q<=1;q++) {
 
@@ -250,17 +147,15 @@ void drawship( int x, int y, int j ) {
       if ( j& 0x10 ) {
        SETDOTP( x, y - 2);
       }
-      
-      float angle = ((j/2000.0) * 2 * 3.1415 * 20 );
-            
+                  
       // Make ship spin
             
-      int shiplight = ( cos( angle ) * ( sin( angle ) < 0 ? -1 : 1 ) ) * 4  ;
+      int shiplight = (j/10 % 13);
       
-      CLRDOTP( x+shiplight , y );  
+      CLRDOTP( x+shiplight-4 , y );  
 }
 
-void undrawship( int x, int y ) {
+void undrawship( int x, uint8_t y ) {
 
       for (int q=-1;q<=1;q++) {
 
@@ -276,6 +171,46 @@ void undrawship( int x, int y ) {
   
 }
 
+#define DIGIT5WIDTH 5
+#define DIGIT5HEIGHT 5
+
+const uint8_t digits5[][DIGIT5WIDTH] = {
+
+ {0x7c,0x4c,0x54,0x64,0x7c},
+ {0x10,0x30,0x10,0x10,0x38},            
+ {0x78,0x04,0x38,0x40,0x7c},            
+ {0x7c,0x04,0x38,0x04,0x7c},            
+ {0x40,0x40,0x50,0x7c,0x10},            
+ {0x7c,0x40,0x78,0x04,0x78},            
+ {0x7c,0x40,0x7c,0x44,0x7c},            
+ {0x7c,0x04,0x08,0x10,0x10},            
+ {0x7c,0x44,0x7c,0x44,0x7c},            
+ {0x7c,0x44,0x7c,0x04,0x7c},
+  
+};
+
+
+void drawdigit5( int center, int digit ) {
+
+   uint8_t w = DIGIT5WIDTH;
+
+   int x= center - (w/2);
+
+   for( uint8_t c=0; c<DIGIT5WIDTH; c++ ) {
+   
+    for( uint8_t r =0; r<DIGIT5HEIGHT; r++ ) {
+      
+        if (digits5[digit][r] & _BV((DIGIT5WIDTH-c)+1)) {
+          SETDOTP( x , r +2 ); 
+        }
+        
+    }
+
+    x++;
+    
+  }
+
+}
 // IMages from...
 /// http://cdn.instructables.com/FTR/8PSF/HCB8T24U/FTR8PSFHCB8T24U.LARGE.jpg
 
@@ -420,11 +355,12 @@ const uint8_t gravec[] = {
 
 // x is left side, always drawn full height
 
-void drawmap( int center , const uint8_t *map , int w) {
+void drawmap( uint16_t center , const uint8_t *map , uint8_t w) {
 
    int x=center-(w/2);
    // Left half
    int i=0;
+  
    while (i<w) {    
     if (x>=0 && x<COLS) dots[x] |= map[i];    
     x++;
@@ -434,7 +370,7 @@ void drawmap( int center , const uint8_t *map , int w) {
 }
 
 
-void undrawmap( int center , const uint8_t *map , int w) {
+void undrawmap( uint16_t center , const uint8_t *map , uint8_t  w) {
 
    int x=center-(w/2);
    // Left half
@@ -457,14 +393,14 @@ void clear() {
 
  #define STARS 10
   
-  // all fixed point with Assumed 2 decimals
+  // all fixed point with Assumed 1 decimals
 int starsX[STARS];
 int starsY[STARS];
 int starsDX[STARS];
 int starsDY[STARS];
 
 
-void drawalien( int x, int i, uint8_t open) {
+void drawalien( uint16_t x, uint8_t i, uint8_t open) {
   
   if (i==0) {  // alien 1
   
@@ -516,7 +452,7 @@ void drawalien( int x, int i, uint8_t open) {
 }
 
 
-void undrawalien( int x, int i, uint8_t open) {
+void undrawalien( uint16_t x, uint8_t i, uint8_t open) {
   
   if (i==0) {  // alien 1
   
@@ -551,141 +487,129 @@ void undrawalien( int x, int i, uint8_t open) {
 
 void loop() {
   
-  // Set up alien locations
-    
-  for( int s=0;s<ALIENCOUNT;s++) {
-    
-    // Center with random velocity
-    starsX[s]=( (COLS-(13*s)-8 + COLS ) *100 );      // Arange them with some space in between.
-    starsDX[s]= -20;                       // not moving    
-    
-    starsDY[s]=s&1;                    // Coop this field to hold alien type
-  }
+
+  /*
   
+  // Testing code - flips dtata and clock as fast as possible.
+  // Use to check board compatibility (Trinket is NOT compatible becuase of pull-ups)
   
+    TIMSK |= _BV(OCIE0A);  // Turn off timer int
+
+    while(1) {
+      PORTB|=_BV(3);
+      PORTB&=~_BV(4);
+      PORTB&=~_BV(3);
+      PORTB|=_BV(4);
+    }
+ 
+   */
+
   clear();
 
-  for(int l=0; l<900; l++ ) {
-    
-    clear();
-    
-    for( int s=0; s<ALIENCOUNT; s++ ) {
-      
-      starsX[s] += starsDX[s];
-      
-      drawalien( starsX[s]/100 , starsDY[s] , l&32 );
-      
-    }
-    
-    SYNC(10);
-    
-  }
-  
- 
-  
-  // Running away aleins get fired upon and explode to rubble
-  
-  for(int s=0; s<ALIENCOUNT; s++) {
-    
-    starsX[s] = ((-20*s) )*100;
-    
-    starsDX[s] = +60 ;    // ;    // Run away!!!! Give later guys more speed to spread the pack
-    
-  }
-  
-  starsDX[ALIENCOUNT-1] = 28;    // Last guy is a slow poke
-  
-  int shipX= starsX[ALIENCOUNT-1] - (50*100);      // start with ship far off to left in hot persuit
-  int shipDX = 30;                                 // Same speed as slow alien
-  
-  int laserX=0;  
-    
-  for(int l=0; l<1000; l++ ) {
-    
-    clear();
-        
-        
-     if (!laserX) {     // If as laser is not currently in process
-     
-        if (shipDX) {
-          if (shipX>=20*100) {    // Fire! when we get half way though the first panel.
-            laserX=shipX;              
-            shipDX=0;
-            
-          }
-        }
-        
-      } else {
-        
-        laserX+=100;    // Advance laser beam. Very fast laser
-        
-     }
-    
-    
-    if (laserX) {   
-      
-      // Draw laser starting at ship    
-       
-      for(int x=shipX/100; x<laserX/100 ; x++ ) {
-        
-        // draw beam      
-        SETDOTP( x , ROWS/2 );
-  
-        // Collision detection...
-        
-          
-        if (x>= (starsX[ALIENCOUNT-1]/100)) {    // Direct hit!
-        
-          starsDY[ALIENCOUNT-1] = 2;      // turn to explosion!
-          starsDX[ALIENCOUNT-1] = 0;      // halt in its trax
-          
-          laserX = 0;   // Stop laser
-          //while(1);
+  for (int s=1; s<COLS;s++ ){
 
+    if (s%5==0) {
+
+      SETDOTP( s , 0);
+
+    
+      if (s%10==0) {
+  
+        SETDOTP( s , 1);
+  
+        if (s%50==0) {
+  
+            SETDOTP( s , 2);
+  
+            drawdigit5( s-(DIGIT5WIDTH/2)-2 ,s/100 );
+            drawdigit5( s+(DIGIT5WIDTH/2)+2 ,s/10 % 10 );
+  
         }
-          
+  
         
       }
+  
+    }
 
+    delay(50);
+  }
+
+   
+  for( int s=0; s<(COLS+(13*6)); s++ ) {      // s=center of leftmost alien 
+  
+    clear();
+    
+    for( int a=0; a<6; a++) {        // Six aliens
+    
+      drawalien( s + (a*13) , a&1 , (s+8)&16);
+    
     }
     
-    drawship( shipX/100 , ROWS/2 , l );    // Draw the ship after the laser so the beam doesn obscure the spinner
-
+    SYNC(50);    
     
-    for( int s=0; s<6; s++ ) {
-      
-      starsX[s] += starsDX[s];
-      
-      if ( starsDY[s] == 0)  {        
-        drawalien( starsX[s]/100 , 0 , l&8 );    // Open
-      } else if  ( starsDY[s] == 1)  {
-        drawalien( starsX[s]/100 , 1 , l&8 );    // Close
-      } else if  ( starsDY[s] < 100)  {
-          if ( starsDY[s] & 8 ) {
-            drawalien( starsX[s]/100 , 2 , l&8 );    // Explosion
-          }
-        starsDY[s]++;
-      } else if (starsDY[s] <160) {
-        drawalien( starsX[s]/100 , 3 , l&8 );    // rubble
-        starsDY[s]++;        
-      } else if (starsDY[s] <200) {
-        drawalien( starsX[s]/100 , 4 , 1 );    // mound
-        starsDY[s]++;        
-      } else if (starsDY[s] <240) {
-        drawalien( starsX[s]/100 , 4 , 0 );    // grave
-        //starsDY[s]++;        
-      } 
-      
-    }
-           
-    shipX+=shipDX;  //FAST SHIP!
-    
-    SYNC(10);
+//    delay(10);
     
   }
   
-  //return;
   
+  // Now flying forward...
+  
+  clear();
+  delay(DELAY);
+    
+  // init stars
+  for( int s=0;s<STARS;s++) {
+    
+    // Center with random forward velocity
+    starsX[s]=random(COLS*10);
+    starsY[s]=random(ROWS*10);
+    starsDX[s]=(random(9)+1) * -1;    
+  }
+  
+  
+  int shipX = (-40)*10;      // Start ship to the left off the screen 40 cols
+  
+  while (shipX<COLS*10) { 
+    
+      clear();
+
+      //undrawship( (shipX/100) , ROWS/2 );
+    
+      shipX += 2;
+
+      drawship( shipX/10 , ROWS/2 , shipX/7 );
+    
+      for(int s=0;s<STARS;s++) {
+        
+//        uint16_t oldX = starsX[s];
+  //      uint16_t oldY = starsY[s];
+          
+        starsX[s] += starsDX[s];        
+        
+        // Off display hoazontally?
+        if (starsX[s] < 0) {
+          starsX[s]=(COLS-1)*10;
+          starsY[s]=random(ROWS*10);
+          starsDX[s]=(random(9)+1) * -1;                       
+        }
+         
+        // Erase old star pos
+//        CLRDOT( oldX/100 , oldY/10 );    
+        
+        // Draw new
+        SETDOT( starsX[s]/10 , starsY[s]/10 );
+      }
+            
+                    
+      SYNC(2);
+             
+  }
+  
+  
+  
+  
+  int l=0;
+    
   for(int i=0; i<COLS; i++ ){
     
     dots[i] = 0b10101010;
@@ -755,6 +679,26 @@ void loop() {
     
   }
   delay(DELAY);  
+  
+  
+  // Hello world cross hatch pattern  
+  
+  for(int i=0; i<COLS; i++ ){
+    
+    dots[i] = 0b10101010;
+    
+  }
+  
+  delay(DELAY);
+  
+  for(int i=0; i<COLS; i++ ){
+    
+    dots[i] = 0b01010101;
+    
+  }
+  
+  delay(DELAY);
+
   
   for(int i=0; i<COLS; i++ ){
     
@@ -912,222 +856,9 @@ void loop() {
     SYNC(1);
     
   }
-  
-  delay(DELAY);
-  
-  for( int s=0;s<STARS;s++) {
     
-    // Center with random velocity
-    starsX[s]=(COLS*(100/2));
-    starsY[s]=(ROWS*(100/2));
-    starsDX[s]=(random(90)+10) * (random(2)==1?1:-1);
-    starsDY[s]=random(50)-25;    // Ok to have zero y velocity
-    
-  }
- 
-
-  int centerX = COLS/2;  
-  
-  for(int j=0;j<400;j++) {    
-
-      // Undraw ship
-      
-      for (int q=-1;q<=1;q++) {
-
-        for(int p=-3;p<=3;p++) {
-        
-          dots[ (centerX /100)+p   ] &= ~_BV((ROWS/2)+q);
-        }
-      
-      }
-      
-      CLRDOT( (centerX/100) , (ROWS/2) - 2);
-      
-
-    
-    
-    // Make the center move to a sin wave, cenetered, spaning 75% width, 3 cycles
-    centerX = ( (((sin( (j/2000.0) * 2 * 3.1415 * 5 )+1.0)/2.0) * (3.0/4.0)) + (1.0/8.0)) * (COLS * 100);
-    
-    
-    for(int s=0;s<STARS;s++) {
-      
-      int oldX = starsX[s];
-      int oldY = starsY[s];
-        
-      starsX[s] += starsDX[s];
-      starsY[s] += starsDY[s];
-      
-      
-      // Off display hoazontally?
-      if (starsY[s]<0 || starsY[s]>=ROWS*100 || starsX[s] < 0 || starsX[s]>=COLS*100 ) {
-        starsX[s]=centerX;
-        starsY[s]=(ROWS*(100/2));
-        
-        // Random velocity -200 to +200 parabola. No values between -20 and +20 to prevent stuck stars
-        starsDX[s]=(random(90)+10) * (random(2)==1?1:-1);
-        starsDY[s]=random(50)-25;    // Ok to have zero y velocity
-        
-      }
-      
-      // only draw if still on the display veritcally
-      
-//      if (starsY[s]>=0 && starsY[s]<(ROWS*100)) {       
-//       dots[starsX[s]/100] |= ( 1<<(starsY[s]/100 ) );        
-//      }
-
-      // erase old pos if on the display vertically...
-      
-      if (oldY>=0 && oldY<(ROWS*100) ) {        
-        dots[oldX/100] &= ~ ( 1<<(oldY/100 ) );
-      }
-
-      if (starsY[s]>=0 && starsY[s]<(ROWS*100)) {             
-        dots[starsX[s]/100] |= ( 1<<(starsY[s]/100 ) );
-      }
-      
-      
-      for (int q=-1;q<=1;q++) {
-
-        for(int p=-3+abs(q);p<=3-abs(q);p++) {
-        
-          dots[ (centerX /100)+p   ] |= _BV((ROWS/2)+q);
-        }
-      
-      }
-      
-      // Blinking top light
-      
-      if ( j& 0x10 ) {
-       SETDOT( (centerX/100) , (ROWS/2) - 2);
-      }
-      
-      float angle = ((j/2000.0) * 2 * 3.1415 * 20 );
-            
-      // Make ship spin
-            
-      int shiplight = ( cos( angle ) * ( sin( angle ) < 0 ? -1 : 1 ) ) * 4  ;
-      
-      dots[ (centerX /100)+shiplight   ] &= ~_BV(ROWS/2);
-            
-   }
-   
-   SYNC(5);
-             
-  }
-  
-  
-  // Now flying forward...
   
   clear();
-  delay(DELAY);
-  
-  
-  // init stars
-  for( int s=0;s<STARS;s++) {
-    
-    // Center with random forward velocity
-    starsX[s]=random(COLS*100);
-    starsY[s]=random(ROWS*100);
-    starsDX[s]=(random(90)+10) * -1;    
-  }
-  
-  shipX = -400;      // Start ship to the left off the screen
-  
-  for(int j=0;j<2000;j++) {    
-
-      undrawship( (shipX/100) , ROWS/2 );
-    
-      shipX += 7;
-    
-      for(int s=0;s<STARS;s++) {
-        
-        int oldX = starsX[s];
-        int oldY = starsY[s];
-          
-        starsX[s] += starsDX[s];        
-        
-        // Off display hoazontally?
-        if (starsX[s] < 0) {
-          starsX[s]=(COLS-1)*100;
-          starsY[s]=random(ROWS*100);
-          starsDX[s]=(random(90)+10) * -1;                       
-        }
-         
-        // Erase old star pos
-        CLRDOT( oldX/100 , oldY/100 );    
-        
-        // Draw new
-        SETDOT( starsX[s]/100 , starsY[s]/100 );
-      }
-            
-      drawship( shipX/100 , ROWS/2 , j/5 );
-                    
-      SYNC(2);
-             
-  }
-  
-  clear();
-  delay(DELAY);
-  
-  
-  
-  
-    
-}
-
-
-void oldloop() {
-  
-  
-   hwiped();
-   hwipeu();
-   
-   vwiper();
-   vwipel();
-  
-  
-   allon();
-  // put your main code here, to run repeatedly:
-  
-  PORTB = 0x07;    // Select ROW 8- which is actually a dummy row for selecting the data bit
-    
-  for( int i=0; i<100; i++) {
-    
-    
-    PORTD |= _BV( 4 );  // Set Data high
-    
-    // Pulse clock
-    
-    PORTD |=   _BV(2);    // Clock high
-  //  delay(1);
-    PORTD &= ~_BV(2);     // Clock low
-  //  delay(1);
-    
-    PORTD &= ~_BV( 4 );  // Set Data low
-    
-    // Pulse clock
-    
-    PORTD |=   _BV(2);    // Clock high
- //   delay(1);
-    PORTD &= ~_BV(2);     // Clock low
- //   delay(1);
-    
-  }
-  
-  for( int p=0; p<100; p++ ) {
-    
-     // OK, we just pumped alternating rows of data bits. Light em up!
-     
-     for( int i=0; i<7; i++ ){
-       
-       PORTB = i;    // Select ROW. This will light an LED if its ROW is on
-       delay(100);     
-       
-     }
-     
-  }
-      
-      
+  delay(DELAY);         
 
 }
