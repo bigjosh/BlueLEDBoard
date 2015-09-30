@@ -1071,15 +1071,16 @@ void loop() {
 */
   demoloop();
 
-  while (!Serial.available());
-    
-  char c = Serial.read();
+  while (1) {
 
-  dots[0] = 0xff;
-  dots[1] = c;
-    
+    while (!Serial.available());
+      
+    char c = Serial.read();
+  
+    dots[0] = 0xff;
+    dots[1] = c;
+
+  }
 }
-
-
 
 
