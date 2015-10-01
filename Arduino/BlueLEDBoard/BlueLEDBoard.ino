@@ -4,7 +4,10 @@
 // COL DATA   - MOSI - PB3 - Chip pin 17 - Arduino Pin 11 - Board IC1 pin 32
 // COL CLOCK  - SCK  - PB5 - Chip pin 19 - Arduino pin 13 - Board IC1 pin  7
 
-// ROW SELECT - PC0-PC3 - Chip pins 23-26 - Arduino pins A0-A3 - Board IC1 pins 1-4
+// ROW SELECT - PB0-PB2 - Chip pins 14-16 - Arduino pins 8-10 - Board IC1 pins 1-3
+// ROW SELECT HI (dormant, always 0)- PB4 - Chip pin PB4 - Arduino pin 12 - Board IC1 pin 3
+
+// NOTE: code assumes it is ok to directly assign row to full 8 bits of PB even though only bottom 3 bits are used
 
 // DATAb connected directly to ground (data lines are ORed on the board) - IC1 pin 17
 
@@ -35,11 +38,11 @@ volatile uint8_t isr_row = 0;  // Row to display on next update
 
 volatile uint8_t sync = 0;  // set to 0 after refresh so you can sync to it (vertical retrace sync)
 
-#define SETROWBITS(ROW)	(PORTC = ROW)         // Set the seelct bits that drive a row of LEDs
+#define SETROWBITS(ROW)	(PORTB = ROW)         // Set the seelct bits that drive a row of LEDs
 
 void setupRowDDRbits() {
 
-	DDRC = 0b00001111;			// row bits
+	DDRB |= 0b00010111;			// row bits
 
 }
 
@@ -99,6 +102,8 @@ uint8_t spiBuffer[ SPI_BUFFER_LEN ];
 // Called from timer interrupt to refresh the next row of the LED display
 void refreshRow()
 {
+ //   PINB|=0xff;
+
 
   // First load up the bitBuffer
 
@@ -1045,7 +1050,6 @@ void setup() {
 
   //delay(100);
 
-
   setupTimer();
   SPI_MasterInit();
 
@@ -1056,6 +1060,8 @@ void setup() {
 
 
 void loop() {
+
+  
 /*
   PORTC |= _BV(5);
   asm("nop");
