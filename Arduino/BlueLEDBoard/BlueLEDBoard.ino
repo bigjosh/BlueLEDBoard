@@ -5,8 +5,8 @@
 // COL CLOCK  - SCK  - PB5 - Chip pin 19 - Arduino pin 13 - Board IC1 pin  7
 
 // ROW SELECT - PB0-PB2 - Chip pins 14-16 - Arduino pins 8-10 - Board IC1 pins 1-3
-// ROW SELECT HI (dormant, always 0)- PB4 - Chip pin PB4 - Arduino pin 12 - Board IC1 pin 3
 
+// NOTE: ROW SELECT #3 is hardwired to ground on the daughter board
 // NOTE: code assumes it is ok to directly assign row to full 8 bits of PB even though only bottom 3 bits are used
 
 // DATAb connected directly to ground (data lines are ORed on the board) - IC1 pin 17
@@ -27,22 +27,80 @@
 
 #define PADDED_COLS ROUNDUPN_TO_NEARESTM( COLS, 8)    // Add padding at the end past the right edge of the display so we have full 8-bit bytes to pass down to SPI
           
-uint8_t dots[PADDED_COLS];   // Packed bits
+uint8_t dots[PADDED_COLS];     
+
+            // These bits are actually being displayed on the LEDs by the background refresh thread
+            // Packed bits
 						// dot[0], bit 0 = upper leftmost LED
 						// dot[COLS-1], bit (ROWS-1) = lower rightmost LED
 
             // Note that technically we do not need to allocate the extra space at the end for the padding since
-            // whatever data ends up here will get sent to the dispaly, but will fall off the end and never actually end up on the LEDs.             
+            // whatever data ends up here will get sent to the dispaly, but will fall off the end and never actually end up on the LEDs.         
+
+
+volatile uint8_t sync = 0;  // used to syncronize frame buffer updates to avoid tearing. set to 0 after display refresh so you can sync to it (vertical retrace sync)
+
+#define SYNC(); {sync=1;while(sync);}            // Block until diplay refresh complete. 
+
+
+// Otherwise, the 1st byte of a message (0x01-FD) is the count of the number of bytes to follow
+
+uint8_t dotsBuffer[PADDED_COLS];     // This buffer is reading in new bits from the Serial. It gets copied to the display buffer when we recieve a COMMAND_DISPLAY
+
+uint16_t dotsBufferHead = 0;         // Where most recently recieved byte was written n the circular buffer
+
+// Read an process any serial byte that might have come in since last time we checked. 
+
+void readSerialByte() {
+
+  if (Serial.available()) {
+
+    int c = Serial.read();
+
+    dots[0] = c;
+
+    for(int b=0;b<8;b++) {
+
+      dots[b+1] = ( c & 1<<b) ? 0b1010000 : 0b00000101 ; 
+
+    }
+
+    if (c==0xff) {        // 0xff=display current buffer command
+
+      SYNC();                                     // Wait for vertical refresh interval to avoid tearing from copying while display is updating
+
+     /*
+      memcpy( dots  , dotsBuffer+ dotsBufferHead , PADDED_COLS-dotsBufferHead );   // Copy the new bits into the actual display buffer
+      memcpy( dots + (PADDED_COLS - dotsBufferHead ) , dotsBuffer , dotsBufferHead );
+      */
+
+      memcpy( dots , dotsBuffer , PADDED_COLS );
+
+      dotsBufferHead=0;
+      
+    } else {
+
+      if (dotsBufferHead<PADDED_COLS) {
+
+        dotsBuffer[dotsBufferHead++] = c;        // Post increment faster on AVR
+
+      }
+
+    }
+
+  }
+  
+}
+
 
 volatile uint8_t isr_row = 0;  // Row to display on next update
 
-volatile uint8_t sync = 0;  // set to 0 after refresh so you can sync to it (vertical retrace sync)
 
 #define SETROWBITS(ROW)	(PORTB = ROW)         // Set the seelct bits that drive a row of LEDs
 
 void setupRowDDRbits() {
 
-	DDRB |= 0b00010111;			// row bits
+	DDRB |= 0b00000111;			// row bits
 
 }
 
@@ -67,7 +125,6 @@ void SPI_MasterInit(void)
 
     SPDR = 0;     // Send a dummy byte to prime the pump so that the interrupt bit will be set when we go to send the first real byte. 
     
-    //TODO: Probably change mode so setup is on falling, DORDER, 
 }
 
 inline void SPI_MasterTransmit(char cData)
@@ -81,8 +138,12 @@ inline void SPI_MasterTransmit(char cData)
   //while(!(SPSR & (1<<SPIF)));  
   //do {
     SPDR = cData;
+//    SPSR;             
+    
   //} while (SPSR & _BV(WCOL));
   while(!(SPSR & (1<<SPIF)));  
+
+  // TODO: Blind send on the SPI to maximize output speed. Just need to count clock cycles to make sure we don't overrrun.
   
 }
 
@@ -104,8 +165,15 @@ void refreshRow()
 {
  //   PINB|=0xff;
 
+      DDRC = _BV(5);
+      PORTC |= _BV(5);
+
 
   // First load up the bitBuffer
+
+  // TODO: preformat pixels into rows at the sender so this Step is unnessisary
+
+  sei();  // TODO: get rid of this 
 
 	uint8_t row_mask = 1 << isr_row;    // For quick bit testing
 
@@ -135,11 +203,11 @@ void refreshRow()
     spiBuffer[--spiBufferPtr] = t;    // (pre-decrement indirect addressing faster in AVR) 
 
   }
- 
 
   // Ok, bits from the current row in dots[] are now packed into bytes in spiBuffer[]. 1st byte is still leftmost on display. Rightmost bytes are sacraficial to give us a nice byte boundary
 
   spiBufferPtr = SPI_BUFFER_LEN;    
+
   
   // Everything is staged and ready to quickly squirt out the bytes over SPI
   // Once the set the row bits, the LEDs are off so the race is on! The longer the LEDs are off, the dimmer the display will look.
@@ -148,7 +216,7 @@ void refreshRow()
 							  // Would be nice to leave the LEDs on while shifting out the cols but
 							  // unfortunately then we'd display arifacts durring the shift
 
-  
+  delayMicroseconds(1);   // Give the darlingtons a chance to turn off so we don't get visual artifacts when we start shifting bits in
 
   while (spiBufferPtr) {
 
@@ -156,9 +224,10 @@ void refreshRow()
    //   asm("nop;nop;nop;nop;");
    //   PORTC &= ~_BV(5);
 
+      
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR)
 
-      __builtin_avr_delay_cycles(7);
+      //__builtin_avr_delay_cycles(7);
       
   }
 	
@@ -177,6 +246,7 @@ void refreshRow()
 
 	}
 
+  PORTC &= ~_BV(5);
 
 }
 
@@ -189,65 +259,8 @@ void setupTimer() {
 }
 
 
-#define COMMAND_NULL    0x00  // Do nothing. We can then send a bunch of these in a row to resync.  
-#define COMMAND_DISPLAY 0xFF  // Put the last recieved data on the display
-#define COMMAND_REBOOT  0xFE  // Reboot if the bytes in the buffer match the string "BOOT"
-
-// Otherwise, the 1st byte of a message (0x01-FD) is the count of the number of bytes to follow
-
-// Read an process any serial byte that might have come in since last time we checked. 
-
-void readSerialByte() {
-
-  uint8_t ss_read_bytes;      // Number of bytes left to read into the pixel buffer. Only valid durring SS_DATA state. 
-
-  if (Serial.available()) {
-
-    char c = Serial.read();
-
-    if (ss_read_bytes) {    // Currently reading in a message?
-
-      // TODO: pack 7 bits into 8bit bytes
-
-      dots[ss_read_bytes--] = c;
-      
-    } else {
-
-      if (c==COMMAND_DISPLAY) {
-
-        // TODO: Make display double buffered
-        
-      } else if (c==COMMAND_REBOOT) {
-
-        if (dots[0]=='B' && dots[1]=='O' && dots[2]== 'O' && dots[3] =='T') {   // Safety interlock
-
-          // TODO: make this work. maybe jump to the reset vector?
-          /*
-          wdt_enable(WDTO_15MS);  
-          while (1);              // Wait for the inveitable!
-          */
-          
-        }
-
-
-        
-      }
-
-
-      
-    }
-
-        
-
-    
-  }
-}
-
-
 
 #define DELAY 400
-
-#define SYNC(); {sync=1;while(sync);}
 
 #define SETDOT(c,r) dots[c] |= _BV(r)
 #define CLRDOT(c,r) dots[c] &= ~_BV(r)
@@ -1026,7 +1039,7 @@ void demoloop() {
 
 void serialInit() {       // Initialize serial port to Recieve display data
 
-  Serial.begin(115000);
+  Serial.begin(250000);
 
 }
 
@@ -1075,17 +1088,10 @@ void loop() {
 
   while(1);
 */
-  demoloop();
+  //demoloop();
 
   while (1) {
-
-    while (!Serial.available());
-      
-    char c = Serial.read();
-  
-    dots[0] = 0xff;
-    dots[1] = c;
-
+    readSerialByte();
   }
 }
 
