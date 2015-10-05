@@ -2,7 +2,10 @@
 
 #include <math.h>
 #include <stdlib.h>
-#include<stdio.h>
+#include <stdio.h>
+
+#include <string.h>			// memset on linux
+
 
 
 #ifdef WIN32
