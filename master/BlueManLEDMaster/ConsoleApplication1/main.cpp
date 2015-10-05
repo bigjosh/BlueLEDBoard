@@ -75,17 +75,17 @@ void clear() {
 
 }
 
-int main()
+int main(int argc, char **argv)
 {
 
 
 
 	printf("BlueManBoard Serial Test\r\n");
 
-	f = fopen("\\\\.\\COM6", "w+b");
+	f = fopen(argv[1], "w+b");
 
 	if (f == NULL) {
-		printf("failed\r\n");
+		printf("failed to open serial device %s\r\n", argv[1]);
 		return(1);
 	}
 	else {
