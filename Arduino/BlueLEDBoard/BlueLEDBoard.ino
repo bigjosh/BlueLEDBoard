@@ -68,7 +68,6 @@ SIGNAL(USART_RX_vect) {
                   
     }
 
-    //int rerror = 
 
     readBuffer[readBufferHead++] = c;
 
@@ -105,13 +104,24 @@ void serialInit() {       // Initialize serial port to Recieve display data
 
 
   // TODO: Get faster baud rate working. Probably need zoer copy double and to enable ints durring SPI output
-  /*Set baud rate 100000*/
-  UBRR0L = (unsigned char)9;
+
+  /*Set baud rate 100K*/
+  //UBRR0L = (unsigned char)9;
+  //UBRR0H = (unsigned char)0;// 
+
+
+  /*Set baud rate 1M*/
+  UBRR0L = (unsigned char)0;
   UBRR0H = (unsigned char)0;// 
 
 
-  /*Set baud rate 250000*/
+  /*Set baud rate 250K*/
   //UBRR0L = (unsigned char)3;
+  //UBRR0H = (unsigned char)0;
+
+
+  /*Set baud rate 38400*/
+  //UBRR0L = (unsigned char)25;
   //UBRR0H = (unsigned char)0;
 
   

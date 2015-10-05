@@ -62,7 +62,7 @@ void sendDots() {
 
 	fflush(f);
 
-	_sleep(5);
+	_sleep(100);
 
 	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
@@ -82,7 +82,7 @@ int main()
 
 	printf("BlueManBoard Serial Test\r\n");
 
-	f = fopen("\\\\.\\COM12", "w+b");
+	f = fopen("\\\\.\\COM6", "w+b");
 
 	if (f == NULL) {
 		printf("failed\r\n");

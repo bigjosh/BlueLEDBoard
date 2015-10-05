@@ -1,9 +1,15 @@
 #include "BlueManLEDMaster.h"
 
 #include <math.h>
-#include <windows.h>
 #include <stdlib.h>
 #include<stdio.h>
+
+
+#ifdef WIN32
+
+	#include <windows.h>
+
+#endif
 
 
 #define DELAY 400
@@ -401,7 +407,7 @@ void demo() {
 
 		sendDots();
 		//delay(1);
-		shipX += 1;
+		shipX += 10;
 
 	}
 
