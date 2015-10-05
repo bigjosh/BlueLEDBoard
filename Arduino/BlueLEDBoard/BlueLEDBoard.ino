@@ -14,6 +14,7 @@
 #include <TimerOne.h>
 #include <avr/power.h>        
 
+
 #define FRAME_RATE 80
 
 #define ROWS 7
@@ -27,7 +28,9 @@
 
 #define PADDED_COLS ROUNDUPN_TO_NEARESTM( COLS, 8)    // Add padding at the end past the right edge of the display so we have full 8-bit bytes to pass down to SPI
 
-#define BUFFER_SIZE ( (PADDED_COLS/8) * ROWS )        // Size of a full screen buffer
+#define ROW_BYTES (PADDED_COLS/8)       // Number of bytes in a row in the buffer
+
+#define BUFFER_SIZE ( ROW_BYTES * ROWS )        // Size of a full screen buffer
           
 uint8_t spiBuffer[ BUFFER_SIZE ];     
 
@@ -47,47 +50,40 @@ uint16_t readBufferHead = 0;         // Where most recently recieved byte was wr
 volatile uint8_t packetTimeout=0;     // If we dont' get a serial byte for a while, we reset to the begining of a packet
                                      // this is driven by the the refresh interval. 
 
-// Read an process any serial byte that might have come in since last time we checked. 
+// Read recieved serial byte and put into buffer
 
-// TODO: Make out own int driven reciever since the arduino one is flakey and Adds an unnessary layer
 
-void readSerialByte() {
+SIGNAL(USART_RX_vect) {
 
-  if (Serial.available()) {
+  while ( UCSR0A & _BV( RXC0 ) ) {    // While chars are available...
 
+    PORTC |= _BV(4);
+
+    unsigned char c = UDR0;
+    
     if (!packetTimeout) {
 
-            PORTC |= _BV(4);
 
             readBufferHead=0;
                   
     }
 
-    packetTimeout = 5;
+    //int rerror = 
 
-    int c = Serial.read();
+    readBuffer[readBufferHead++] = c;
 
-/*
-    dots[0] = c;
+    //UDR0= (  readBufferHead % 10 ) + '0';
 
-    for(int b=0;b<8;b++) {
-
-      dots[b+1] = ( c & 1<<b) ? 0b1010000 : 0b00000101 ; 
-
-    }
-
-    */
-
-
-    readBuffer[readBufferHead++] = c;        // Post increment faster on AVR
+    packetTimeout = 4;
 
     if ( readBufferHead >= BUFFER_SIZE) {
 
+      PORTC |= _BV(5);
 
       // TODO: Double or tripple buffer this so that we just update a flag to tell the refreh thread to use the new buffer
 
 
-      SYNC();                                           // Wait for vertical refresh interval to avoid tearing from copying while display is updating
+      //SYNC();                                           // Wait for vertical refresh interval to avoid tearing from copying while display is updating
 
       memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // COpy the entire buffer even though it might not be full just to keep timing consistant
 
@@ -96,8 +92,41 @@ void readSerialByte() {
       
     }
 
+    PORTC =0;   
+
   }
   
+}
+
+
+void serialInit() {       // Initialize serial port to Recieve display data
+  
+//  uint16_t ubrr = F_CPU/16/BAUD-1;
+
+
+  // TODO: Get faster baud rate working. Probably need zoer copy double and to enable ints durring SPI output
+  /*Set baud rate 100000*/
+  UBRR0L = (unsigned char)9;
+  UBRR0H = (unsigned char)0;// 
+
+
+  /*Set baud rate 250000*/
+  //UBRR0L = (unsigned char)3;
+  //UBRR0H = (unsigned char)0;
+
+  
+  /* Enable receiver and transmitter */
+  UCSR0B = (1<<RXEN0)|(1<<TXEN0);
+
+  // Enable recieve interrupt
+
+  UCSR0B |= _BV( RXCIE0);
+
+  // Leaved default settings for N-8-1
+  
+  //Serial.begin(100000);
+
+
 }
 
 
@@ -142,14 +171,30 @@ inline void SPI_MasterTransmit(char cData)
 
   //while(!(SPSR & (1<<SPIF)));  
   //do {
+//  SPSR;
     SPDR = cData;
-//    SPSR;             
+    //SPSR;             
     
   //} while (SPSR & _BV(WCOL));
-  while(!(SPSR & (1<<SPIF)));  
+ while(!(SPSR & (1<<SPIF)));  
 
   // TODO: Blind send on the SPI to maximize output speed. Just need to count clock cycles to make sure we don't overrrun.
   
+}
+
+// Set a dot directly in the SPI buffer - displayed immedeately on next refresh pass
+
+void setDot( int row, int col ) {
+
+  spiBuffer[ ( row * ROW_BYTES ) + ( col / 8 ) ] |= 1 << ( col & 7 ) ;
+
+}
+
+
+void clearDot( int row, int col ) {
+
+  spiBuffer[ ( row * ROW_BYTES ) + ( col / 8 ) ] &= ~ (1 << ( col & 7 )) ;
+
 }
 
 
@@ -178,13 +223,16 @@ void refreshRow()
   delayMicroseconds(1);   // Give the darlingtons a chance to turn off so we don't get visual artifacts when we start shifting bits in
                           // Added this becuase I once saw some ghosting to the right on a single string - probably not needed on most controllers
 
-  uint16_t spiCount = BUFFER_SIZE/ROWS;      // Send one row per refresh
+
+  spiBufferPtr = isr_row * ROW_BYTES;   // Remeber isrrow is +1 here, so we are pointing one past the end of the row in the buffer 
+  
+  uint16_t spiCount = ROW_BYTES;      // Send one row per refresh - could also say spiCount = PADDED_COLS / 8 
 
   while (--spiCount) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
 
-      //__builtin_avr_delay_cycles(7);
+     // __builtin_avr_delay_cycles(2);
       
   }
 
@@ -196,7 +244,7 @@ void refreshRow()
 
   if ( isr_row == 0 ) {     // Did we scan out all the rows?
 
-		spiBufferPtr = BUFFER_SIZE;     // Start over at the end of the buffer
+		//spiBufferPtr = BUFFER_SIZE;     // Start over at the end of the buffer
     isr_row = ROWS;
     sync=0;                         // Signal vertical retrace so forground knows when to start drawing to avoid tearing on the display
 
@@ -214,16 +262,7 @@ void setupTimer() {
 
 
 
-void serialInit() {       // Initialize serial port to Recieve display data
-
-  Serial.begin(100000);
-
-}
-
-
-
 void setup() {
-
 
   
   // put your setup code here, to run once:
@@ -265,11 +304,128 @@ void loop() {
 
   while(1);
 */
-  //demoloop();
 
-  while (1) {
-    readSerialByte();
-  }
+/*
+      for( int c = 0; c< COLS ; c++ ) {
+
+        for( int r = 0 ; r < ROWS ; r++ ) {
+
+          setDot( r , c ) ;
+          
+          SYNC();
+
+          //clearDot( r , c ) ;
+          
+
+        }
+      }
+        
+
+      for( int c = 0; c< COLS ; c++ ) {
+
+        for( int r = 0 ; r < ROWS ; r++ ) {
+
+          //setDot( r , c ) ;
+          
+          SYNC();
+
+          clearDot( r , c ) ;
+          
+
+        }
+  */      
+
+    for( int c = 0; c< COLS ; c++ ) {
+
+        
+      SYNC();
+
+      for( int r = 0 ; r < ROWS ; r++ ) {
+
+        setDot( r , c ) ;
+
+      }
+   
+    }
+
+      
+    for( int c = 0; c< COLS ; c++ ) {
+
+      SYNC();
+
+      for( int r = 0 ; r < ROWS ; r++ ) {
+
+        clearDot( r , c ) ;
+
+      }
+        
+
+    }
+
+    for( int r=0; r<ROWS; r++ ) {
+      SYNC();
+
+      for( int c=0; c< COLS;c++ ) {
+
+          setDot( r , c );
+          
+      }
+
+      delay(50);
+
+    }
+
+    for( int r=0; r<ROWS; r++ ) {
+      SYNC();
+
+      for( int c=0; c< COLS;c++ ) {
+
+          clearDot( r , c );
+          
+      }
+
+      delay(50);
+
+
+    }
+
+    SYNC();
+
+    for( int r=0; r<ROWS; r++ ) {
+
+      for( int c=0; c< COLS;c++ ) {
+
+          if ( (r+c) & 1 ) {
+            setDot( r , c );
+          }
+          
+      }
+
+    }
+
+    delay(750);
+
+    SYNC();
+
+    for( int r=0; r<ROWS; r++ ) {
+
+      for( int c=0; c< COLS;c++ ) {
+
+          if ( (r+c) & 1 ) {
+            clearDot( r , c );
+          } else {
+            setDot( r , c );
+            
+          }
+          
+      }
+
+    }
+
+    delay(750);
+
+    while (1);      // EVerything now happens over ISR, so We do nothing...
+    
 }
 
 

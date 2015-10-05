@@ -30,14 +30,14 @@ void sendDots() {
 
 	int dotCount = 0;
 
-	for(int r = 0; r < ROWS; r++) {
+	for (int r= 0; r < ROWS; r++ ) {
 
 		int bit = 0;
 
 		int out = 0;
 
-		for (int c = 0; c < PADDED_COLS; c++) {
-
+		for (int c = 0; c < PADDED_COLS; c++ ) {
+		
 			if (dots[r][c]) {
 
 				out |= 1 << bit;
@@ -46,9 +46,10 @@ void sendDots() {
 
 			bit++;
 
-			if (bit >= 8) {
+			if (bit == 8) {
 
 				fputc(out, f);
+
 				dotCount++;
 
 				out = 0;
@@ -61,9 +62,9 @@ void sendDots() {
 
 	fflush(f);
 
-	_sleep(1);
+	_sleep(5);
 
-	printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
+	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
 }
 
@@ -71,7 +72,6 @@ void sendDots() {
 void clear() {
 
 	memset(dots, 0x00, ROWS*PADDED_COLS);
-
 
 }
 
@@ -96,104 +96,69 @@ int main()
 	while (1) {
 
 		clear();
+		for (int i = 0; i < ROWS; i++) {
+
+			dots[i][i*2] = 1;
+		}
+		sendDots();
+		_sleep(3000);
+
+		for (int c = 0; c < COLS; c++) {
+
+			for (int r = 0; r < ROWS; r++) {
+
+				dots[r][c] = 1;
+
+			}
+
+			sendDots();
+
+			//printf("c=%d\r\n", c);
+
+			//_sleep(100);
+
+		}
+
+
+		for (int c = 0; c < COLS; c++) {
+
+			for (int r = 0; r < ROWS; r++) {
+
+				dots[r][c] = 0;
+
+			}
+
+			sendDots();
+
+		}
+
 		for (int r = 0; r < ROWS; r++) {
 
-			for (int c = 0; c < PADDED_COLS; c++) {
+			for (int c = 0; c < COLS; c++) {
 
-				if ((r + c) & 1) {
-
-					dots[r][c] = 1;
-
-				}
-
+				dots[r][c] = 1;
 			}
 
-		}
-		printf("hatch.");
-		sendDots();
-		_sleep(1000);
+			sendDots();
 
-		clear();
+			_sleep(100);
+
+
+		}
+
 		for (int r = 0; r < ROWS; r++) {
 
-			for (int c = 0; c < PADDED_COLS; c++) {
+			for (int c = 0; c < COLS; c++) {
 
-				if ((c) & 1) {
-
-					dots[r][c] = 1;
-
-				}
-
+				dots[r][c] = 0;
 			}
 
-		}
-		printf("stipe.");
-		sendDots();
-		_sleep(1000);
+			sendDots();
 
-
-
-
-		clear();
-		sendDots();
-		_sleep(1000);
-
-	}
-	
-
-
-
-
-	//demo();
-	return(0);
-
-	/*
-	// Resycn reciever
-	for (int i = 0; i < 255; i++) {
-
-		fputc(0x00, f);
-
-	}
-
-	printf("synced.");
-
-
-	fputc(7, f);
-
-	for (int i = 0; i < 7; i++) {
-
-		fputc(i, f);
-	}
-
-	//return(0);
-	fputc(255, f);		// Sending 7 bytes
-	*/
-	while (1) {
-
-		int i = 0;
-
-		while (i < 128) {
-
-			for (int l = 0; l < 84 * 5; l++) {
-
-				fputc(i, f);
-
-			}
-
-			i++;
-
-			fputc(0xff, f);			// Actual splat onto the display
-
-			fflush(f);
-
-			_sleep(10);
-
-			printf("x");
+			_sleep(100);
 
 
 		}
-
-
 	}
 
 	return 0;

@@ -21,3 +21,5 @@ extern unsigned char dots[ROWS][PADDED_COLS];
 void sendDots();
 
 void demo();
+
+void clear();

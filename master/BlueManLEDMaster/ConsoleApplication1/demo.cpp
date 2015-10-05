@@ -8,19 +8,18 @@
 
 #define DELAY 400
 
-#define SETDOT(c,r) dots[c] |= _BV(r)
-#define CLRDOT(c,r) dots[c] &= ~_BV(r)
+#define SETDOT(c,r) (dots[r][c] = 1)
+#define CLRDOT(c,r) (dots[r][c] = 0)
 
 // Only set or clr if on screen
 #define SETDOTP(c,r) if (c>=0 && c<COLS && r>=0 && r<ROWS) SETDOT(c,r)
 #define CLRDOTP(c,r) if (c>=0 && c<COLS && r>=0 && r<ROWS) CLRDOT(c,r)
 
-#define _BV(x) (2^x)
+#define _BV(x) (1<<x)
 
 #define delay(x) Sleep(x)
 
 #define random(x) (rand()%x)
-
 
 void drawship(int x, unsigned char y, int j) {
 
@@ -45,21 +44,6 @@ void drawship(int x, unsigned char y, int j) {
 	CLRDOTP(x + shiplight - 4, y);
 }
 
-void undrawship(int x, unsigned char y) {
-
-	for (int q = -1; q <= 1; q++) {
-
-		for (int p = -3 + abs(q); p <= 3 - abs(q); p++) {
-			CLRDOTP(x + p, y + q);
-		}
-
-	}
-
-	// Blinking top light
-
-	CLRDOTP(x, y - 2);
-
-}
 
 #define DIGIT5WIDTH 5
 #define DIGIT5HEIGHT 5
@@ -255,7 +239,10 @@ void drawmap(unsigned int center, const unsigned char *map, unsigned char w) {
 	int i = 0;
 
 	while (i < w) {
-		if (x >= 0 && x < COLS) dots[x] |= map[i];
+		for (int r = 0; r < ROWS; r++) {
+			if (map[i] & (1 << r)) SETDOTP(r, x);
+		}
+
 		x++;
 		i++;
 	}
@@ -263,26 +250,6 @@ void drawmap(unsigned int center, const unsigned char *map, unsigned char w) {
 }
 
 
-void undrawmap(unsigned int center, const unsigned char *map, unsigned char  w) {
-
-	int x = center - (w / 2);
-	// Left half
-	int i = 0;
-	while (i < w) {
-		if (x >= 0 && x < COLS) dots[x] &= ~map[i];
-		x++;
-		i++;
-	}
-
-}
-
-
-// Clear the display
-
-void clear() {
-	unsigned int c = COLS;
-	while (c) dots[--c] = 0x00;  // Clear screen  - pre decrement inditect addressing 
-}
 
 
 #define STARS 10
@@ -353,46 +320,11 @@ void drawalien(unsigned int x, unsigned char i, unsigned char open) {
 }
 
 
-void undrawalien(unsigned int x, unsigned char i, unsigned char open) {
-
-	if (i == 0) {  // alien 1
-
-		if (open) {   // open
-
-			undrawmap(x, enemy1o, sizeof(enemy1o));
-
-		}
-		else {    // close
-
-			undrawmap(x, enemy1c, sizeof(enemy1c));
-
-		}
-
-	}
-	else if (i == 1) {    // enemy 2
-
-		if (open) {   // open
-
-			undrawmap(x, enemy2o, sizeof(enemy2o));
-
-
-		}
-		else {    // close
-
-			undrawmap(x, enemy2c, sizeof(enemy2c));
-
-		}
-	}
-
-}
-
-
 #define ALIENCOUNT 6
 
 void demo() {
 
 	printf("marching\r\n");
-
 
 	const int alien_spacing = 2;    // Gap between adjecent aleins
 	const int alien_train_width = (ALIEN_WIDTH * ALIENCOUNT) + (alien_spacing * (ALIENCOUNT - 1));
@@ -407,8 +339,7 @@ void demo() {
 
 		}
 
-		sendDots();
-		//delay(1);
+		sendDots();		
 
 	}
 
@@ -473,315 +404,6 @@ void demo() {
 
 
 
-	int l = 0;
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0b10101010;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0b01010101;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0xff;
-
-	}
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int i = 0; i < COLS; i++) {
-
-		if (i & 1) {
-			dots[i] = 0xff;
-		}
-		else {
-			dots[i] = 0x00;
-		}
-
-	}
-
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int i = 0; i < COLS; i++) {
-
-		if (i & 1) {
-			dots[i] = 0x00;
-		}
-		else {
-			dots[i] = 0xff;
-		}
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0xff;
-
-	}
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	// Hello world cross hatch pattern  
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0b10101010;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0b01010101;
-
-	}
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int i = 0; i < COLS; i++) {
-
-		if (i & 1) {
-			dots[i] = 0b01010101;
-		}
-		else {
-			dots[i] = 0b10101010;
-
-		}
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int i = 0; i < COLS; i++) {
-
-		if (i & 1) {
-			dots[i] = 0b10101010;
-		}
-		else {
-			dots[i] = 0b01010101;
-		}
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0xff;
-
-	}
-	sendDots();
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0;
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0xff;
-		delay(6);
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = 0; i < COLS; i++) {
-
-		dots[i] = 0x00;
-		delay(6);
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = COLS - 1; i >= 0; i--) {
-
-		dots[i] = 0xff;
-		delay(6);
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-	for (int i = COLS - 1; i >= 0; i--) {
-
-		dots[i] = 0x00;
-		delay(6);
-
-	}
-
-	sendDots();
-
-	delay(DELAY);
-
-
-	for (int r = 0; r < ROWS; r++) {
-
-		unsigned char m = (1 << (r + 1)) - 1;
-
-		
-
-		for (int c = 0; c < COLS; c++) {
-			dots[c] = m;
-		}
-
-		sendDots();
-
-		delay(100);
-
-	}
-	//  delay(DELAY);  
-
-
-	for (int r = 0; r < ROWS; r++) {
-
-		unsigned char m = ~((1 << (r + 1)) - 1);
-
-		
-
-		for (int c = 0; c < COLS; c++) {
-			dots[c] = m;
-		}
-		sendDots();
-
-		delay(100);
-
-	}
-
-	for (int r = 0; r < ROWS; r++) {
-
-		unsigned char m = ~((1 << (ROWS - r)) - 1);
-
-		
-
-		for (int c = 0; c < COLS; c++) {
-			dots[c] = m;
-		}
-		sendDots();
-
-		delay(100);
-
-	}
-	//  delay(DELAY);  
-
-
-	//  delay(DELAY);  
-
-	for (int r = 0; r < ROWS; r++) {
-
-		unsigned char m = (1 << ((ROWS - 1) - r)) - 1;
-
-		
-
-		for (int c = 0; c < COLS; c++) {
-			dots[c] = m;
-		}
-		sendDots();
-
-		delay(100);
-
-	}
-	//  delay(DELAY);  
-
-
-	for (int l = 0; l < 2000; l++) {
-
-		int r = random(COLS *ROWS);
-		int col = r / ROWS;
-		int row = r%ROWS;
-
-		dots[col] |= 1 << row;
-		sendDots();
-
-		delay(1);
-
-	}
-
-
-	for (int l = 0; l < 2000; l++) {
-
-		int r = random(COLS *ROWS);
-		int col = r / ROWS;
-		int row = r%ROWS;
-
-		dots[col] &= ~(1 << row);
-
-		sendDots();
-
-		delay(1);
-
-	}
-
 
 	clear();
 	sendDots();
@@ -823,7 +445,6 @@ void demo() {
 	}
 
 	delay(1000);
-
 
 
 }
