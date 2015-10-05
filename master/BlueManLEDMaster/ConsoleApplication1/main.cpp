@@ -1,7 +1,6 @@
 // ConsoleApplication1.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
 
 #include <conio.h>
 
@@ -12,6 +11,7 @@
 
 
 #include "BlueManLEDMaster.h"
+
 
 
 
@@ -62,7 +62,7 @@ void sendDots() {
 
 	fflush(f);
 
-	_sleep(100);
+	sleep(100);
 
 	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
@@ -101,7 +101,7 @@ int main()
 			dots[i][i*2] = 1;
 		}
 		sendDots();
-		_sleep(3000);
+		sleep(3000);
 
 		for (int c = 0; c < COLS; c++) {
 
@@ -141,7 +141,7 @@ int main()
 
 			sendDots();
 
-			_sleep(100);
+			sleep(100);
 
 
 		}
@@ -155,7 +155,7 @@ int main()
 
 			sendDots();
 
-			_sleep(100);
+			sleep(100);
 
 
 		}

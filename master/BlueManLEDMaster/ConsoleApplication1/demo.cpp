@@ -23,8 +23,6 @@
 
 #define _BV(x) (1<<x)
 
-#define delay(x) Sleep(x)
-
 #define random(x) (rand()%x)
 
 void drawship(int x, unsigned char y, int j) {
@@ -361,7 +359,7 @@ void demo() {
 	clear();
 	sendDots();
 
-	delay(DELAY);
+	sleep(DELAY);
 
 	// init stars
 	for (int s = 0; s < STARS; s++) {
@@ -418,7 +416,7 @@ void demo() {
 	clear();
 	sendDots();
 
-	delay(DELAY);
+	sleep(DELAY);
 
 
 	// Draw ruler with ticks every 5 pixels and numbers every 50
@@ -451,10 +449,10 @@ void demo() {
 
 		}
 		sendDots();
-		delay(10);
+		sleep(10);
 	}
 
-	delay(1000);
+	sleep(1000);
 
 
 }

@@ -23,3 +23,16 @@ void sendDots();
 void demo();
 
 void clear();
+
+#ifdef WIN32
+
+#include <windows.h>
+	#include "stdafx.h"
+	#define sleep(m) Sleep(m)
+
+#else 
+
+	#include <unistd.h>			// Get usleep()
+	#define sleep(m) usleep(m*1000)
+
+#endif
