@@ -92,7 +92,7 @@ int main()
 		printf("Success!\r\n");
 	}
 
-	//demo();
+	demo();
 	while (1) {
 
 		clear();

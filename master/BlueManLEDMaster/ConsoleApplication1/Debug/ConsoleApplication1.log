@@ -1,25 +1,17 @@
-﻿Build started 10/4/2015 11:07:45 PM.
+﻿Build started 10/5/2015 10:45:03 AM.
      1>Project "E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\ConsoleApplication1\ConsoleApplication1.vcxproj" on node 2 (Build target(s)).
      1>C:\Program Files\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (Debug\) contains files shared from another project (ConsoleApplication1.vcxproj).  This can lead to incorrect clean and rebuild behavior.
      1>ClCompile:
-         C:\Program Files\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt main.cpp
-         main.cpp
-     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\main.cpp(65): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
-         c:\program files\windows kits\10\include\10.0.10150.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
-     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\main.cpp(85): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
-         c:\program files\windows kits\10\include\10.0.10150.0\ucrt\stdio.h(205): note: see declaration of 'fopen'
-     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\main.cpp(104): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
-         c:\program files\windows kits\10\include\10.0.10150.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
-     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\main.cpp(144): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
-         c:\program files\windows kits\10\include\10.0.10150.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
-     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\main.cpp(158): warning C4996: '_sleep': This function or variable has been superceded by newer library or operating system functionality. Consider using Sleep instead. See online help for details.
-         c:\program files\windows kits\10\include\10.0.10150.0\ucrt\stdlib.h(1266): note: see declaration of '_sleep'
+         C:\Program Files\Microsoft Visual Studio 14.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\" /Fd"Debug\vc140.pdb" /Gd /TP /analyze- /errorReport:prompt demo.cpp
+         demo.cpp
+     1>e:\users\josh\documents\github\blueledboard\master\bluemanledmaster\consoleapplication1\demo.cpp(77): warning C4554: '<<': check operator precedence for possible error; use parentheses to clarify precedence
        Link:
-         C:\Program Files\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.lib" /MACHINE:X86 Debug\main.obj
+         C:\Program Files\Microsoft Visual Studio 14.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /Debug /PDB:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.lib" /MACHINE:X86 Debug\demo.obj
+         Debug\main.obj
          Debug\stdafx.obj
          ConsoleApplication1.vcxproj -> E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\Debug\BlueManLEDMaster.exe
      1>Done Building Project "E:\Users\josh\Documents\GitHub\BlueLEDBoard\master\BlueManLEDMaster\ConsoleApplication1\ConsoleApplication1.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:00.33
+Time Elapsed 00:00:00.73

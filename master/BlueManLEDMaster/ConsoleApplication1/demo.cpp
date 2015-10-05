@@ -234,13 +234,17 @@ const unsigned char gravec[] = {
 
 void drawmap(unsigned int center, const unsigned char *map, unsigned char w) {
 
+
+
 	int x = center - (w / 2);
-	// Left half
+
 	int i = 0;
 
 	while (i < w) {
 		for (int r = 0; r < ROWS; r++) {
-			if (map[i] & (1 << r)) SETDOTP(r, x);
+			if (map[i] & (1 << r)) {
+				SETDOTP(x, r);
+			}
 		}
 
 		x++;
@@ -361,7 +365,7 @@ void demo() {
 		starsY[s] = random(ROWS * 10);
 		starsDX[s] = (random(9) + 1) * -1;
 
-		printf("Star %d , %d, %d\r\n", starsX[s], starsY[s], starsDX[s]);
+		//printf("Star %d , %d, %d\r\n", starsX[s], starsY[s], starsDX[s]);
 	}
 
 
@@ -389,11 +393,11 @@ void demo() {
 
 			SETDOT(starsX[s] / 10, starsY[s] / 10);
 
-			printf("%2.2d %5.5d,%5.5d,%5.5d ", s , starsX[s], starsY[s], starsDX[s]);
+			//printf("%2.2d %5.5d,%5.5d,%5.5d ", s , starsX[s], starsY[s], starsDX[s]);
 
 		}
 
-		printf("\r\n");
+		//printf("\r\n");
 
 		sendDots();
 		//delay(1);
