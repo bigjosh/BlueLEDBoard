@@ -52,6 +52,7 @@ volatile uint8_t packetTimeout=0;     // If we dont' get a serial byte for a whi
 
 // Read recieved serial byte and put into buffer
 
+volatile uint8_t packetFlag=0;      // 1=new packet waiting in readBuffer
 
 SIGNAL(USART_RX_vect) {
 
@@ -81,10 +82,9 @@ SIGNAL(USART_RX_vect) {
 
       // TODO: Double or tripple buffer this so that we just update a flag to tell the refreh thread to use the new buffer
 
+      packetFlag = 1 ;        //Signal to refresh process that we have a new packet ready
 
       //SYNC();                                           // Wait for vertical refresh interval to avoid tearing from copying while display is updating
-
-      memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // COpy the entire buffer even though it might not be full just to keep timing consistant
 
       readBufferHead=0;
 
@@ -238,6 +238,8 @@ void refreshRow()
   
   uint16_t spiCount = ROW_BYTES;      // Send one row per refresh - could also say spiCount = PADDED_COLS / 8 
 
+  sei();    // Allow com ints while we are busy squirting SPI.
+
   while (--spiCount) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
@@ -258,6 +260,13 @@ void refreshRow()
     isr_row = ROWS;
     sync=0;                         // Signal vertical retrace so forground knows when to start drawing to avoid tearing on the display
 
+
+    if (packetFlag) {     // New packet available in serial buffer?
+
+      memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // COpy the entire buffer even though it might not be full just to keep timing consistant
+      packetFlag =0;
+
+    }
 	}
 
 }
