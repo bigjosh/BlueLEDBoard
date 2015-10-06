@@ -25,10 +25,14 @@ unsigned char dots[ROWS][PADDED_COLS];
 
 FILE *f;
 
+unsigned char buffer[BUFFER_SIZE];
+
 
 void sendDots() {
 
 	int dotCount = 0;
+
+	unsigned char *p=buffer;
 
 	for (int r= 0; r < ROWS; r++ ) {
 
@@ -48,7 +52,8 @@ void sendDots() {
 
 			if (bit == 8) {
 
-				fputc(out, f);
+				*(p++) =out;
+
 
 				dotCount++;
 
@@ -59,6 +64,8 @@ void sendDots() {
 		}
 
 	}
+
+	fwrite(  buffer , sizeof(*buffer) , BUFFER_SIZE , f );
 
 	fflush(f);
 
