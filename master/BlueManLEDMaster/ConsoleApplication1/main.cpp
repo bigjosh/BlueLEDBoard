@@ -69,7 +69,7 @@ void sendDots() {
 
 	fflush(f);
 
-	sleep(100);
+//	sleep(100);
 
 	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
