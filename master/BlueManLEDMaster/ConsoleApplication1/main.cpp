@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>			// memset on linux
-
+//#include <sys/time.h>		
 
 
 #include "BlueManLEDMaster.h"
@@ -26,6 +26,11 @@ unsigned char dots[ROWS][PADDED_COLS];
 FILE *f;
 
 unsigned char buffer[BUFFER_SIZE];
+
+struct timeval lastSend = { 0,0 };
+
+
+#define MINIMUM_SEND_DELAY_MS 200			// Current boards run at 80 FPS, so this gives a little extra room between updates
 
 
 void sendDots() {
@@ -68,8 +73,18 @@ void sendDots() {
 	fwrite(  buffer , sizeof(*buffer) , BUFFER_SIZE , f );
 
 	fflush(f);
+/*
+	struct timeval t;
+	unsigned long elapsedTime;
 
-//	sleep(100);
+	gettimeofday(&t2, NULL);
+
+	// compute and print the elapsed time in millisec
+	elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000;      // sec to ms
+	elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
+
+*/
+	sleep(10);
 
 	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
@@ -99,8 +114,10 @@ int main(int argc, char **argv)
 		printf("Success!\r\n");
 	}
 
-	demo();
 	while (1) {
+
+		demo();
+
 
 		clear();
 		for (int i = 0; i < ROWS; i++) {

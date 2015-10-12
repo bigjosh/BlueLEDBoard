@@ -1,3 +1,6 @@
+
+
+
 // Drive BlueMan LED controller board
 
 
@@ -54,44 +57,41 @@ volatile uint8_t packetTimeout=0;     // If we dont' get a serial byte for a whi
 
 volatile uint8_t packetFlag=0;      // 1=new packet waiting in readBuffer
 
-SIGNAL(USART_RX_vect) {
+void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
 
-  while ( UCSR0A & _BV( RXC0 ) ) {    // While chars are available...
+    PORTC |=_BV(5);
 
-    PORTC |= _BV(4);
-
-    unsigned char c = UDR0;
-    
     if (!packetTimeout) {
-
 
             readBufferHead=0;
                   
     }
 
-
     readBuffer[readBufferHead++] = c;
-
-    //UDR0= (  readBufferHead % 10 ) + '0';
 
     packetTimeout = 4;
 
-    if ( readBufferHead >= BUFFER_SIZE) {
-
-      PORTC |= _BV(5);
+    if ( readBufferHead == BUFFER_SIZE) {
 
       // TODO: Double or tripple buffer this so that we just update a flag to tell the refreh thread to use the new buffer
 
       packetFlag = 1 ;        //Signal to refresh process that we have a new packet ready
 
-      //SYNC();                                           // Wait for vertical refresh interval to avoid tearing from copying while display is updating
-
       readBufferHead=0;
-
       
     }
 
-    PORTC =0;   
+    PORTC &=~_BV(5);
+
+}
+
+SIGNAL(USART_RX_vect) {
+
+  while ( UCSR0A & _BV( RXC0 ) ) {    // While chars are available...
+
+    unsigned char c = UDR0;
+    
+    pushSerialByte( c ); 
 
   }
   
@@ -213,6 +213,24 @@ uint8_t isr_row = ROWS;  // Row to display on next update
 uint16_t spiBufferPtr = PADDED_COLS * ROWS;      // Where are we in the buffer - we will stream one row of bytes on each cycle
                                            // We read tail to head becuase it is slightly faster to compare to 0 at the end of each pass
 
+// We need a little minibufer just to process any serial bytes that come in while we are in the middle of our SPI
+// squirt. This squirt must complete as fast as possible (becuase all LEDs are off while it is running), so we can't
+// let any interrupts happen while it is going on. Instead, we will poll the serial port and grab any bytes that come in
+// Quickly store them into the tiny buffer. That buffer only has to be as big as the maximum number of bytes that can possibly
+// come in at the current baud rate dirring the time it takes ot send one row via SPI. Since we know that the Serial port
+// cant recieve bytes faster than the current baud rate, we do not need to check for buffer overruns when storing into the 
+// mini buffer which saves time. 
+
+// (1,000,000 bits/sec) / (10 bits/byte) = 100,000 bytes/sec serial = 10us/byte serial
+// (8,000,000 bits/sec) /(8 bits/byte) = 1,000,000 bytes/sec SPI = 1us/byte SPI
+// 84*5 ~= 500 bits/row
+// (500 bits/row) * (1/(8,000,000 s/bit)) =  63us/row
+// http://www.wolframalpha.com/input/?i=%28500+bits%2Frow%29+*+%28+%281%2F8%2C000%2C000%29+s%2Fbit%29+in+us
+// (63us/row SPI) / (10us/byte serial) ~= 6 bytes serial/row SPI
+// We will make the mini buffer much bigger since we have planety of room and the SPI is not 100% fast 
+
+unsigned char miniBuffer[100];                                           
+
 // Called from timer interrupt to refresh the next row of the LED display
 
 void refreshRow()
@@ -238,24 +256,70 @@ void refreshRow()
   
   uint16_t spiCount = ROW_BYTES;      // Send one row per refresh - could also say spiCount = PADDED_COLS / 8 
 
-  sei();    // Allow com ints while we are busy squirting SPI.
+  uint8_t *miniBufferPtr=miniBuffer;
 
   while (--spiCount) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
 
+      if ( UCSR0A & _BV( RXC0 ) ) {    // If a char is available, save it for later. We only need to check for one char becuase we knw that the serial port is running slower than the SPI port so never more than ! byte serial ready for each SPI pass
+
+        unsigned char c = UDR0;
+
+        *(miniBufferPtr++) = c;
+
+      }
+  
      // __builtin_avr_delay_cycles(2);
       
   }
 
   // note that spiBufferPtr will naturally point to the next row here, and keeps on decrementing though the full buffer acorss all rows
-	
+
 	// turn on the row of LEDs... (also sets clock and data low)
 
 	SETROWBITS( --isr_row );
 
+  // now that row of LEDs is back on, we have time to drain any chars that came into the mini buffer while we were squirting
+
+  // Note that interrupts are still off here and we can't turn them back on becuase the new incoming bytes could scramble the 
+  // ones we are dumping from the mini buffer  
+  
+  uint8_t *miniBufferReaderPtr = miniBuffer;
+
+  while (miniBufferReaderPtr<miniBufferPtr) {
+
+      // we still must keep manually checking the serial buffer becuase unloading the mini buffer tkaes longer than incoming serial data to fill the buffer
+
+      if ( UCSR0A & _BV( RXC0 ) ) {    // If a char is available, save it for later. We only need to check for one char becuase we knw that the serial port is running slower than the SPI port so never more than ! byte serial ready for each SPI pass
+
+        unsigned char c = UDR0;
+
+        *(miniBufferPtr++) = c;
+
+      }
+    
+
+      pushSerialByte( *(miniBufferReaderPtr++ ) );   
+
+  }
+
+  sei();      // Ok, let the serial interrupt take back over while we possibly do a time consuming buffer switch
+  // TODO: Wont need this when the buffer switch is juts a pointer rather than a memcpy()
+  
+
+  // Note that this should natually just work in concert with the ISR since interrupts are off while we are refreshing the row
+  // and if we clear the Serial buffer then there should not be an ISP when we reenable interrupts after the row is done.
+
+  // A USART Receive Complete interrupt will be
+  // generated only if the RXCIEn bit is written to one, the Global Interrupt Flag in SREG is written to one and the
+  // RXCn bit in UCSRnA is set.  
+
+ 
   if ( isr_row == 0 ) {     // Did we scan out all the rows?
 
+
+    // TODO: have free running spiBuffer thta only gets reset on vertical retrace
 		//spiBufferPtr = BUFFER_SIZE;     // Start over at the end of the buffer
     isr_row = ROWS;
     sync=0;                         // Signal vertical retrace so forground knows when to start drawing to avoid tearing on the display
