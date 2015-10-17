@@ -2,7 +2,7 @@
 
 ## Refresh Rate = 80 FPS
 
-This is set in the daughtboard firmware. Since the LEDs much be off when shifting in a new row of data, and the rate that 
+This is set in the daughterboard firmware. Since the LEDs must be off when shifting in a new row of data, and the rate that 
 new data can be shifted in is limited, then the higher the frame rate the dimmer the display. 80 fps give s good combination of 
 smooth and flicker free animation whchout loosing too much brightness.
 
