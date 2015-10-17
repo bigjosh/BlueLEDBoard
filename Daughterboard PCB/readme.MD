@@ -11,7 +11,7 @@ The board is single sided and you only use the bottom copper layer. It is design
 
 This finished boards look like this...
 
-![](images/board-front.jpg)
+![](images/Board-front.jpg)
 
 ![](images/board-back.jpg)
 
@@ -25,7 +25,7 @@ Here are the connections...
 
 ![](images/connector-front.jpg)
 
-![](images/connector-back) 
+![](images/connector-back.jpg) 
 
 The actual wire colors are not important as long as the signals get to the right pins on the daughterboard. We are currently running the serial link at 1Mbps, so it is probably a good idea to ground the other half of the RX and TX wire pairs.    
 
