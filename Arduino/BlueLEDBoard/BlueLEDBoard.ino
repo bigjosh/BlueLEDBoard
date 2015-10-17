@@ -57,9 +57,8 @@ volatile uint8_t packetTimeout=0;     // If we dont' get a serial byte for a whi
 
 volatile uint8_t packetFlag=0;      // 1=new packet waiting in readBuffer
 
-void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
+inline void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
 
-    PORTC |=_BV(5);
 
     if (!packetTimeout) {
 
@@ -80,8 +79,6 @@ void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
       readBufferHead=0;
       
     }
-
-    PORTC &=~_BV(5);
 
 }
 
@@ -244,12 +241,6 @@ void refreshRow()
   // Everything is staged and ready to quickly squirt out the bytes over SPI
   // Once the set the row bits, the LEDs are off so the race is on! The longer the LEDs are off, the dimmer the display will look.
 
-	SETROWBITS(0x07);		// Select ROW 8- which is actually a dummy row for selecting the data bit  
-							  // Would be nice to leave the LEDs on while shifting out the cols but
-							  // unfortunately then we'd display arifacts durring the shift
-
-  delayMicroseconds(1);   // Give the darlingtons a chance to turn off so we don't get visual artifacts when we start shifting bits in
-                          // Added this becuase I once saw some ghosting to the right on a single string - probably not needed on most controllers
 
 
   spiBufferPtr = isr_row * ROW_BYTES;   // Remeber isrrow is +1 here, so we are pointing one past the end of the row in the buffer 
@@ -258,6 +249,15 @@ void refreshRow()
 
   uint8_t *miniBufferPtr=miniBuffer;
 
+  SETROWBITS(0x07);   // Select ROW 8- which is actually a dummy row for selecting the data bit  
+                // Would be nice to leave the LEDs on while shifting out the cols but
+                // unfortunately then we'd display arifacts durring the shift
+
+  delayMicroseconds(1);   // Give the darlingtons a chance to turn off so we don't get visual artifacts when we start shifting bits in
+                          // Added this becuase I once saw some ghosting to the right on a single string - probably not needed on most controllers
+  
+  // Now the LEDs are off so we need to run full blast. The longer they are off, the dimmer they will appear. 
+  
   while (--spiCount) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
@@ -269,9 +269,7 @@ void refreshRow()
         *(miniBufferPtr++) = c;
 
       }
-  
-     // __builtin_avr_delay_cycles(2);
-      
+        
   }
 
   // note that spiBufferPtr will naturally point to the next row here, and keeps on decrementing though the full buffer acorss all rows
@@ -327,8 +325,10 @@ void refreshRow()
 
     if (packetFlag) {     // New packet available in serial buffer?
 
-      memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // COpy the entire buffer even though it might not be full just to keep timing consistant
+      memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // Copy the entire buffer even though it might not be full just to keep timing consistant
       packetFlag =0;
+
+     // UDR0 = 'V';    // Signal back to the controller that we just started displaying the pending packets so ok to send the next one. 
 
     }
 	}
@@ -370,56 +370,9 @@ void setup() {
 }
 
 
-
 void loop() {
 
-  
-/*
-  PORTC |= _BV(5);
-  asm("nop");
-  PORTC &= ~_BV(5);
-
-  */
-/*
-  for(int i=0; i<ROWS; i++) {
-    SETDOT( i,i);
-  }
-
-  while(1);
-*/
-
-/*
-      for( int c = 0; c< COLS ; c++ ) {
-
-        for( int r = 0 ; r < ROWS ; r++ ) {
-
-          setDot( r , c ) ;
-          
-          SYNC();
-
-          //clearDot( r , c ) ;
-          
-
-        }
-      }
-        
-
-      for( int c = 0; c< COLS ; c++ ) {
-
-        for( int r = 0 ; r < ROWS ; r++ ) {
-
-          //setDot( r , c ) ;
-          
-          SYNC();
-
-          clearDot( r , c ) ;
-          
-
-        }
-  */      
-
     for( int c = 0; c< COLS ; c++ ) {
-
         
       SYNC();
 
@@ -472,6 +425,7 @@ void loop() {
 
     }
 
+
     SYNC();
 
     for( int r=0; r<ROWS; r++ ) {
@@ -507,6 +461,7 @@ void loop() {
 
     delay(750);
 
+   
     while (1);      // EVerything now happens over ISR, so We do nothing...
     
 }
