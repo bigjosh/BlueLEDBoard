@@ -342,7 +342,7 @@ void refreshRow()
       memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // Copy the entire buffer even though it might not be full just to keep timing consistant
       packetFlag =0;
 
-     // UDR0 = 'V';    // Signal back to the controller that we just started displaying the pending packets so ok to send the next one. 
+      UDR0 = 'V';    // Signal back to the controller that we just started displaying the pending packets so ok to send the next one. 
 
     }
 	}
