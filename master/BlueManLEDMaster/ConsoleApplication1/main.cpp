@@ -11,8 +11,7 @@
 
 
 #include "BlueManLEDMaster.h"
-
-
+#include "font5x7.h"
 
 
 unsigned char dots[ROWS][PADDED_COLS];
@@ -97,6 +96,54 @@ void clear() {
 
 }
 
+#define CHAR_WIDTH 5
+#define CHAR_PADDING 1
+
+int stringWidth(const char *s) {
+
+	return(strlen(s) * (CHAR_WIDTH + CHAR_PADDING));
+
+}
+
+void draw5x7(int x, char c) {
+
+	unsigned char *rowbits = &Font5x7[ (c - 0x20) * 5 ];
+
+	for (int col = 0; col < 5; col++) {
+
+		int dotCol = x + col; 
+
+		if (dotCol >= 0 && dotCol <= COLS) {				// Check clipping rectangle
+
+			for (int row = 0; row < 8; row++) {
+
+				if (*rowbits & (1 << row)) {
+
+					dots[row][x + col] = 1;
+
+				}
+			}
+		}
+
+		rowbits++;
+
+	}
+
+}
+
+void draw5x7String(int x, const char *s) {
+
+	while (*s) {
+
+		draw5x7(x, *s);
+
+		x += CHAR_WIDTH + CHAR_PADDING;
+
+		s++;
+	}
+
+}
+
 int main(int argc, char **argv)
 {
 
@@ -113,6 +160,26 @@ int main(int argc, char **argv)
 	else {
 		printf("Success!\r\n");
 	}
+
+
+	const char *message = "This is a very long text string!";
+	int width = stringWidth(message);
+
+	while (1) {
+
+		for(int x = COLS; x > -width ; x--) {
+
+			clear();
+			draw5x7String(x, message);
+			sendDots();
+
+			sleep(10);
+
+		}
+	}
+
+
+
 
 	while (1) {
 
