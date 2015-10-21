@@ -119,7 +119,7 @@ void draw5x7(int x, char c) {
 
 				if (*rowbits & (1 << row)) {
 
-					dots[row][x + col] = 1;
+					dots[row][dotCol] = 1;
 
 				}
 			}
@@ -167,13 +167,14 @@ int main(int argc, char **argv)
 
 	while (1) {
 
-		for(int x = COLS; x > -width ; x--) {
+//		for(int x = COLS; x > -width ; x--) {
+		for (int x = 0; x < COLS; x++ ) {
 
 			clear();
 			draw5x7String(x, message);
 			sendDots();
 
-			sleep(10);
+			sleep(1000);
 
 		}
 	}
