@@ -167,14 +167,15 @@ int main(int argc, char **argv)
 
 	while (1) {
 
-//		for(int x = COLS; x > -width ; x--) {
-		for (int x = 0; x < COLS; x++ ) {
+		for(int x = COLS; x > -width ; x--) {
+//		for (int x = 0; x < COLS; x++ ) {
 
 			clear();
 			draw5x7String(x, message);
 			sendDots();
 
-			sleep(1000);
+			fgetc(f);			// Pause for vertical retrace
+
 
 		}
 	}
