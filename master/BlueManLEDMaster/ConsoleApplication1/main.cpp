@@ -191,6 +191,7 @@ int main(int argc, char **argv)
 		clear();
 		for (int i = 0; i < ROWS; i++) {
 
+
 			dots[i][i*2] = 1;
 		}
 		sendDots();
