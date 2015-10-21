@@ -113,9 +113,9 @@ void draw5x7(int x, char c) {
 
 		int dotCol = x + col; 
 
-		if (dotCol >= 0 && dotCol <= COLS) {				// Check clipping rectangle
+		if (dotCol >= 0 && dotCol < COLS) {				// Check clipping rectangle
 
-			for (int row = 0; row < 8; row++) {
+			for (int row = 0; row < 7 ; row++) {
 
 				if (*rowbits & (1 << row)) {
 
