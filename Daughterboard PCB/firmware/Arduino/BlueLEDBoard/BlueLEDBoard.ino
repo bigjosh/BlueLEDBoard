@@ -1,6 +1,4 @@
 
-
-
 // Drive BlueMan LED controller board
 
 
@@ -16,6 +14,8 @@
 
 #include <TimerOne.h>
 #include <avr/power.h>        
+
+#include "font5x7.h"
 
 
 #define FRAME_RATE 80
@@ -57,6 +57,10 @@ volatile uint8_t packetTimeout=0;     // If we dont' get a serial byte for a whi
 
 volatile uint8_t packetFlag=0;      // 1=new packet waiting in readBuffer
 
+volatile uint8_t demoMode = 1;      // Start in demo mode. Automatically turns off when we recieve a good frame from serial port.
+
+unsigned long demoCount = 0 ;
+
 inline void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
 
 
@@ -77,6 +81,8 @@ inline void pushSerialByte( unsigned char c) {   // Put a byte into the serial b
       packetFlag = 1 ;        //Signal to refresh process that we have a new packet ready
 
       readBufferHead=0;
+
+      demoMode =0;            // Stop showing demo now that we have a good frame 
       
     }
 
@@ -204,6 +210,12 @@ void clearDot( int row, int col ) {
 
 }
 
+void clearDots() {
+
+  memset( spiBuffer ,  0 , BUFFER_SIZE );
+  
+}
+
 
 uint8_t isr_row = ROWS;  // Row to display on next update
 
@@ -257,6 +269,8 @@ void refreshRow()
                           // Added this becuase I once saw some ghosting to the right on a single string - probably not needed on most controllers
   
   // Now the LEDs are off so we need to run full blast. The longer they are off, the dimmer they will appear. 
+
+//spiCount = 3; // TODO: TEsting only
   
   while (--spiCount) {
 
@@ -343,6 +357,42 @@ void setupTimer() {
 
 }
 
+void drawChar( int x , unsigned char c ) {
+
+  for (int col = 0; col < 5; col++) {
+
+    unsigned char rowbits = pgm_read_byte_near( Font5x7 + ((c - 0x20)*5) + col );    
+
+    for (int row = 0; row < 7; row++) {
+
+      if (rowbits & (1 << row)) {
+
+        setDot( row , x + col );
+
+      }
+
+    }
+
+  }  
+}
+
+
+void showNumber( int x , unsigned long int n ) {
+
+  while (n) {
+
+    unsigned long int o = n/10;
+
+    uint8_t digit = n - (o*10);
+
+    drawChar( x , digit + '0' );
+
+    n = o;
+    x+= 7;        // Leave a 1 col space between consecutive digits
+    
+  }
+  
+}
 
 
 void setup() {
@@ -372,11 +422,11 @@ void setup() {
 
 void loop() {
 
-    for( int c = 0; c< COLS ; c++ ) {
+    for( int c = 0; demoMode && c< COLS ; c++ ) {
         
       SYNC();
 
-      for( int r = 0 ; r < ROWS ; r++ ) {
+      for( int r = 0 ; demoMode && r < ROWS ; r++ ) {
 
         setDot( r , c ) ;
 
@@ -385,11 +435,11 @@ void loop() {
     }
 
       
-    for( int c = 0; c< COLS ; c++ ) {
+    for( int c = 0; demoMode && c< COLS ; c++ ) {
 
       SYNC();
 
-      for( int r = 0 ; r < ROWS ; r++ ) {
+      for( int r = 0 ; demoMode && r < ROWS ; r++ ) {
 
         clearDot( r , c ) ;
 
@@ -398,10 +448,10 @@ void loop() {
 
     }
 
-    for( int r=0; r<ROWS; r++ ) {
+    for( int r=0; demoMode && r<ROWS; r++ ) {
       SYNC();
 
-      for( int c=0; c< COLS;c++ ) {
+      for( int c=0; demoMode && c< COLS;c++ ) {
 
           setDot( r , c );
           
@@ -411,10 +461,10 @@ void loop() {
 
     }
 
-    for( int r=0; r<ROWS; r++ ) {
+    for( int r=0; demoMode && r<ROWS; r++ ) {
       SYNC();
 
-      for( int c=0; c< COLS;c++ ) {
+      for( int c=0; demoMode && c< COLS;c++ ) {
 
           clearDot( r , c );
           
@@ -425,15 +475,18 @@ void loop() {
 
     }
 
+    // Cross hatch left
 
     SYNC();
 
-    for( int r=0; r<ROWS; r++ ) {
+    for( int r=0; demoMode && r<ROWS; r++ ) {
 
-      for( int c=0; c< COLS;c++ ) {
+      for( int c=0; demoMode && c< COLS;c++ ) {
 
           if ( (r+c) & 1 ) {
             setDot( r , c );
+          } else {
+            clearDot( r , c );
           }
           
       }
@@ -442,11 +495,14 @@ void loop() {
 
     delay(750);
 
+    // Cross hatch right
+    
+
     SYNC();
 
-    for( int r=0; r<ROWS; r++ ) {
+    for( int r=0; demoMode && r<ROWS; r++ ) {
 
-      for( int c=0; c< COLS;c++ ) {
+      for( int c=0; demoMode && c< COLS;c++ ) {
 
           if ( (r+c) & 1 ) {
             clearDot( r , c );
@@ -460,6 +516,18 @@ void loop() {
     }
 
     delay(750);
+
+    // Up counter
+
+    while (demoMode) {
+
+        SYNC();
+        SYNC();
+        
+        clearDots();
+        showNumber( 0, demoCount++ );
+        
+    }
 
    
     while (1);      // EVerything now happens over ISR, so We do nothing...
