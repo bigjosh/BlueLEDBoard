@@ -272,7 +272,7 @@ void refreshRow()
 
 //spiCount = 3; // TODO: TEsting only
   
-  while (--spiCount) {
+  while (spiCount--) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
 
