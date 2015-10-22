@@ -36,7 +36,7 @@ Daughterboard firmware is  available [here](Daughterboard%20PCB/firmware/Arduino
 ### Master Controller
 The daughter boards are connected via RS232 the the master controller software which runs on a Raspberry PI. This code orchestrates the activity for the entire installation and sends update to the individual strings as necessary.       
 
-The master conntroller software is avialable [here](tree/master/master/BlueManLEDMaster) as a Visual Stuido IDE style solution. Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
+The master controller software is avialable [here](/master/master/BlueManLEDMaster) as a Visual Stuido IDE style solution. Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
 
 ### User Interface
 The Raspberry PI also hosts code that lets the user update the messages and schedule changes.  
@@ -54,4 +54,8 @@ http://amzn.to/1QEHOEJ
 
 But any RS232 connection would work fine since the master software uses the device file names to write to the daughterboard links.
 
+
+## Limits 
+
+Current software-defined limits are available [here](limits.MD). 
 
