@@ -20,6 +20,9 @@ The board is connected by pigtail to a female DB9 RS232 serial port.
 
 The board is designed to act like a standard Arduino UNO, making it possible to use tools like AVRDUDE to download firmware updates over the serial connection.
 
+All the design files and instructions for the daughterboards are [here](Daughterboard PCB).
+
+
   
 ## Software
 
