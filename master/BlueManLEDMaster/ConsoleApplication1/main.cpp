@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>			// memset on linux
+#include <io.h>
+#include <fcntl.h>
+
 //#include <sys/time.h>		
 
 
@@ -22,7 +25,7 @@ unsigned char dots[ROWS][PADDED_COLS];
 #define COMMAND_REBOOT  0xFE  // Reboot if the bytes in the buffer match the string "BOOT"
 
 
-FILE *f;
+int fd;			// File desriptor for the serial port
 
 unsigned char buffer[BUFFER_SIZE];
 
@@ -69,9 +72,8 @@ void sendDots() {
 
 	}
 
-	fwrite(  buffer , sizeof(*buffer) , BUFFER_SIZE , f );
+	write( fd,  buffer , BUFFER_SIZE  );
 
-	fflush(f);
 /*
 	struct timeval t;
 	unsigned long elapsedTime;
@@ -151,9 +153,11 @@ int main(int argc, char **argv)
 
 	printf("BlueManBoard Serial Test\r\n");
 
-	f = fopen(argv[1], "w+b");
+	//f = fopen(argv[1], "w+b");
 
-	if (f == NULL) {
+	fd = open(argv[1], O_BINARY | _O_RDWR);
+
+	if (fd == -1 ) {
 		printf("failed to open serial device %s\r\n", argv[1]);
 		return(1);
 	}
@@ -174,10 +178,13 @@ int main(int argc, char **argv)
 			draw5x7String(x, message);
 			sendDots();
 
-			fgetc(f);			// Pause for vertical retrace
-
 
 		}
+
+		char c;
+
+		read(fd, &c, 1);
+
 	}
 
 
