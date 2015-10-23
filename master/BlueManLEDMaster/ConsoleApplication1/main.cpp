@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>			// memset on linux
-#include <io.h>
+//#include <io.h>
 #include <fcntl.h>
 
 //#include <sys/time.h>		
@@ -85,7 +85,7 @@ void sendDots() {
 	elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0;   // us to ms
 
 */
-	sleep(10);
+//	sleep(100);
 
 	//printf("padded=%d, rows=%d, buffersize=%d, dotCount=%d\r\n", PADDED_COLS, ROWS , BUFFER_SIZE ,  dotCount);
 
@@ -155,7 +155,8 @@ int main(int argc, char **argv)
 
 	//f = fopen(argv[1], "w+b");
 
-	fd = open(argv[1], O_BINARY | _O_RDWR);
+	fd = open(argv[1] , O_RDWR );
+//	fd = open(argv[1], O_BINARY | _O_RDWR);
 
 	if (fd == -1 ) {
 		printf("failed to open serial device %s\r\n", argv[1]);
@@ -164,6 +165,8 @@ int main(int argc, char **argv)
 	else {
 		printf("Success!\r\n");
 	}
+
+	sleep(1000); 		// Let bootloader timeout
 
 
 	const char *message = "This is a very long text string!";
@@ -178,12 +181,13 @@ int main(int argc, char **argv)
 			draw5x7String(x, message);
 			sendDots();
 
+			char c;
+
+			read(fd, &c, 1);
+
+			printf("Got %c\r\n" , c);
 
 		}
-
-		char c;
-
-		read(fd, &c, 1);
 
 	}
 
