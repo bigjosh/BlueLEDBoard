@@ -9,6 +9,7 @@
 #include <string.h>			// memset on linux
 //#include <io.h>
 #include <fcntl.h>
+#include <time.h>
 
 //#include <sys/time.h>		
 
@@ -133,6 +134,14 @@ void draw5x7(int x, char c) {
 
 }
 
+#define MESSAGE "This string of LEDs is connected to port %s of the master controller. It is currently %s.   "
+
+#define TIMESTRINGFORMAT "%A %B %d, %Y at %r %Z"
+
+#define TIMESTRINGLEN 100		// Just a conservative guess
+
+char timestring[TIMESTRINGLEN];
+
 void draw5x7String(int x, const char *s) {
 
 	while (*s) {
@@ -148,9 +157,6 @@ void draw5x7String(int x, const char *s) {
 
 int main(int argc, char **argv)
 {
-
-
-
 	printf("BlueManBoard Serial Test\r\n");
 
 	//f = fopen(argv[1], "w+b");
@@ -166,26 +172,59 @@ int main(int argc, char **argv)
 		printf("Success!\r\n");
 	}
 
-	sleep(1000); 		// Let bootloader timeout
+//	sleep(1000); 		// Let bootloader timeout
+
+	char *message = (char *) malloc( strlen(MESSAGE) + strlen( argv[1] ) + TIMESTRINGLEN );
+
+	if (!message) {
+		printf("no mem for message\r\n");
+		exit(1);
+	}
 
 
-	const char *message = "This is a very long text string!";
-	int width = stringWidth(message);
 
 	while (1) {
 
-		for(int x = COLS; x > -width ; x--) {
-//		for (int x = 0; x < COLS; x++ ) {
+		time_t t;
 
+		t = time(NULL);
+		
+		strftime( timestring , TIMESTRINGLEN , TIMESTRINGFORMAT , localtime( &t ) ); 
+
+		sprintf( message ,  MESSAGE  , argv[1] , timestring );		// Wasted, just to get the length 
+
+		int width = stringWidth(message);
+
+		for(int s = COLS ; s > (COLS-width) ; s--) {		// Start of rightmost copy of message
+
+			t = time(NULL);
+
+			strftime( timestring , TIMESTRINGLEN , TIMESTRINGFORMAT , localtime( &t ) ); 
+	
+			sprintf( message ,  MESSAGE  , argv[1] , timestring );		// Wasted, just to get the length 
+
+
+			int x = s;			
 			clear();
-			draw5x7String(x, message);
+
+			while (x > (-width) ) {		// Draw copyes to fill  whole string
+
+				draw5x7String(x, message);
+
+				x -= width;
+
+			}
+
 			sendDots();
 
 			char c;
 
+			// Wait for sync form daughterboard so we send frames at correct speed
+			// and don't overflow the buffer
+
 			read(fd, &c, 1);
 
-			printf("Got %c\r\n" , c);
+//			sleep(1000);
 
 		}
 
