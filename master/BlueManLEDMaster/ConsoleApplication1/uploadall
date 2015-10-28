@@ -1,0 +1,3 @@
+for d in /dev/ttyUSB?; do
+    ./upload $d 
+done;

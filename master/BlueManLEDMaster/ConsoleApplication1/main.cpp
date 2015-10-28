@@ -1,7 +1,7 @@
-// ConsoleApplication1.cpp : Defines the entry point for the console application.
-//
+// Main code for driving the LEDs. Only opens the LED serial port as a standard file so no 
+// hardware dependancies. 
 
-
+// Yeay!
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,7 +10,8 @@
 //#include <io.h>
 #include <fcntl.h>
 #include <time.h>
-
+#include <sys/time.h>	// gettimeofday
+#include <ctype.h>
 //#include <sys/time.h>		
 
 
@@ -73,6 +74,20 @@ void sendDots() {
 
 	}
 
+	char c;
+
+	// Wait for sync form daughterboard so we send frames at correct speed
+	// and don't overflow the buffer
+	// We do this after everything is completely ready to go to make sure
+	// we get max time to do computation between frames and to ensure
+	// minimum delay until we actually send.
+	// This depending on the non-intuitive behavior of read which is that it will
+	// block until at leat 1 byte is available.
+
+	read(fd, &c, 1);
+	
+	// Ok, all clear to send a new frame buffer	
+
 	write( fd,  buffer , BUFFER_SIZE  );
 
 /*
@@ -99,65 +114,140 @@ void clear() {
 
 }
 
-#define CHAR_WIDTH 5
-#define CHAR_PADDING 1
 
-int stringWidth(const char *s) {
-
-	return(strlen(s) * (CHAR_WIDTH + CHAR_PADDING));
-
-}
-
-void draw5x7(int x, char c) {
+int draw5x7(int x, char c, int strech) {
 
 	unsigned char *rowbits = &Font5x7[ (c - 0x20) * 5 ];
-
+	
+	int xoffset =0; 	// current col 
+	
 	for (int col = 0; col < 5; col++) {
-
-		int dotCol = x + col; 
-
-		if (dotCol >= 0 && dotCol < COLS) {				// Check clipping rectangle
-
-			for (int row = 0; row < 7 ; row++) {
-
-				if (*rowbits & (1 << row)) {
-
-					dots[row][dotCol] = 1;
-
+		
+		for( int s = 0; s<strech; s++ )	{			// Strech
+		
+			int dotCol = x + xoffset; 
+	
+			if (dotCol >= 0 && dotCol < COLS) {				// Check clipping rectangle
+	
+				for (int row = 0; row < 7 ; row++) {
+	
+					if (*rowbits & (1 << row)) {
+	
+						dots[row][dotCol] = 1;
+	
+					}
 				}
 			}
+			
+			xoffset++;
 		}
 
 		rowbits++;
 
 	}
+	
+	return( xoffset );
 
 }
 
-#define MESSAGE "This string of LEDs is connected to port %s of the master controller. It is currently %s.   "
+//#define MESSAGE "This string of LEDs is connected to port %s of the master controller. It is currently <STRFTIME=%A %B %d, %Y at %r %Z>.   "
 
-#define TIMESTRINGFORMAT "%A %B %d, %Y at %r %Z"
+
 
 #define TIMESTRINGLEN 100		// Just a conservative guess
 
-char timestring[TIMESTRINGLEN];
+#define TIMESTRINGFORMAT1 "%A %B %d, %Y at %I:%M:%S %p %Z"
+#define TIMESTRINGFORMAT2 "%A %B %d, %Y at %I %M %S %p %Z"
 
-void draw5x7String(int x, const char *s) {
+char timestringBuffer[TIMESTRINGLEN];
 
+char *timestring() {
+	
+		time_t t;
+
+		t = time(NULL);
+		
+		struct timeval start;	
+		
+		gettimeofday(&start, NULL);
+		
+		if ( start.tv_usec>500000UL) {
+				
+				strftime( timestringBuffer , TIMESTRINGLEN , TIMESTRINGFORMAT1 , localtime( &t ) );
+				
+		} else {
+			
+				strftime( timestringBuffer , TIMESTRINGLEN , TIMESTRINGFORMAT2 , localtime( &t ) );
+			
+		} 	
+							
+		return( timestringBuffer );
+		
+}
+
+
+
+// Returns length of result in pixels
+
+#define DEFAULT_CHAR_PADDING 1
+
+
+int drawString( int x , const char *s ) {
+	
+	int strech =1;
+	int padding = DEFAULT_CHAR_PADDING;
+	
+	int xoffset=0;
+	
 	while (*s) {
+		
+		if (*s == '*' && *(s+1) != '*' ) {			// * = Command, except 2 *'s means just a *
+		
+			s++;
+			
+			switch (*s) {
+				
+				case 'S': 	{			// Set strech
+					s++;
+					if (1 ||isdigit(*s)) {
+						strech = *s - '0';
+						s++;
+					}
+					break;
+				}  
+				
+				case 'T': {				// Insert time
+				
+					s++;
+					xoffset += drawString( x+xoffset , timestring() );
+					xoffset += padding;
+					
+				}
+				
+			}		
+			
+		} else {
 
-		draw5x7(x, *s);
-
-		x += CHAR_WIDTH + CHAR_PADDING;
-
-		s++;
+			xoffset+=draw5x7(x+xoffset, *s , strech);
+	
+			xoffset += padding;
+			
+			s++;
+		}
 	}
-
+	
+	return(xoffset);
+		
 }
 
 int main(int argc, char **argv)
 {
-	printf("BlueManBoard Serial Test\r\n");
+	printf("BlueManBoard Serial LED Driver\r\n");
+	
+	if (argc!=3) {
+		printf( "Usage: arg1=path to connected serial device, arg2=message to send");
+		return(2);
+	}
 
 	//f = fopen(argv[1], "w+b");
 
@@ -169,68 +259,46 @@ int main(int argc, char **argv)
 		return(1);
 	}
 	else {
-		printf("Success!\r\n");
+		printf("Success opening serial device %s\r\n", argv[1]);
 	}
 
 //	sleep(1000); 		// Let bootloader timeout
 
-	char *message = (char *) malloc( strlen(MESSAGE) + strlen( argv[1] ) + TIMESTRINGLEN );
-
-	if (!message) {
-		printf("no mem for message\r\n");
-		exit(1);
-	}
-
-
+	const char*message = argv[2];
 
 	while (1) {
 
-		time_t t;
+//		sprintf( message ,  MESSAGE  , argv[1] , timestring() );		// Wasted, just to get the length 
 
-		t = time(NULL);
-		
-		strftime( timestring , TIMESTRINGLEN , TIMESTRINGFORMAT , localtime( &t ) ); 
-
-		sprintf( message ,  MESSAGE  , argv[1] , timestring );		// Wasted, just to get the length 
-
-		int width = stringWidth(message);
+		int width = drawString( 0 , message );
 
 		for(int s = COLS ; s > (COLS-width) ; s--) {		// Start of rightmost copy of message
-
-			t = time(NULL);
-
-			strftime( timestring , TIMESTRINGLEN , TIMESTRINGFORMAT , localtime( &t ) ); 
 	
-			sprintf( message ,  MESSAGE  , argv[1] , timestring );		// Wasted, just to get the length 
+//			sprintf( message ,  MESSAGE  , argv[1] , timestring() );		// Wasted, just to get the length 
 
-
-			int x = s;			
+			int x = s;
+						
 			clear();
+			
+			// Fill the screen starting from the right side intil we run off the left
 
-			while (x > (-width) ) {		// Draw copyes to fill  whole string
+			while (x > (-width) ) {		// Draw copies to fill  whole string
 
-				draw5x7String(x, message);
-
-				x -= width;
+				x -= drawString( x , message );
 
 			}
 
 			sendDots();
 
-			char c;
+//			sleep( 100 );
 
-			// Wait for sync form daughterboard so we send frames at correct speed
-			// and don't overflow the buffer
-
-			read(fd, &c, 1);
+//			printf("Sent %s\r\n", argv[1]);
 
 //			sleep(1000);
 
 		}
 
 	}
-
-
 
 
 	while (1) {
