@@ -5,8 +5,8 @@ The actual software that drives an LED string. Pass the filename of the serial d
 The message can have the following commands embeded in it...
 
 
-`*Sn` - Strech chars by `n`. So `*S2` makes the following chars twice as wide
-`*T`- Insert the current time/date with blinking colons
+`*Sn` | Strech chars by `n`. So `*S2` makes the following chars twice as wide
+`*T`| Insert the current time/date with blinking colons
 
 ### ./go _device_
 
