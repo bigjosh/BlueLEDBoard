@@ -1,2 +1,2 @@
-stty -F $1 1000000 raw clocal -hupcl -echo
+stty -F $1 1000000 raw clocal -hupcl -echo -crtscts
 ./master $1  "This string of LEDs is connected to port $1 of the master controller. It is currently *T. "
