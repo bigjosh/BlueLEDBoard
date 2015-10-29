@@ -23,7 +23,7 @@
 
 #define CHARS 84                      // Number of char modules
 #define CHAR_WIDTH 5                  // With of each module in LEDs
-#define CHAR_PADDING 6                // Space between chars
+#define CHAR_PADDING 1                // Space between chars
 
 #define COLS  (CHARS*(CHAR_WIDTH+CHAR_PADDING))
 
