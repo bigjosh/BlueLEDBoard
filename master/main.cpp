@@ -191,7 +191,6 @@ char *timestring() {
 
 #define DEFAULT_CHAR_PADDING 1
 
-
 int drawString( int x , const char *s ) {
 	
 	int strech =1;

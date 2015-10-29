@@ -6,8 +6,9 @@
 
 #define CHARS 84                      // Number of char modules
 #define CHAR_WIDTH 5                  // With of each module in LEDs
+#define CHAR_PADDING 1				  // Sapcing between chars
 
-#define COLS  (CHARS*CHAR_WIDTH)
+#define COLS  (CHARS*(CHAR_WIDTH+CHAR_PADDING))
 
 #define ROUNDUPN_TO_NEARESTM( n , m ) ( ( ( n + (m-1) ) / m ) * m)     // Round number to nearest multipule
 
