@@ -17,12 +17,11 @@
 
 #include "font5x7.h"
 
-
 #define FRAME_RATE 80
 
 #define ROWS 7
 
-#define CHARS 84                      // Number of char modules
+#define CHARS 150                      // Number of char modules
 #define CHAR_WIDTH 5                  // With of each module in LEDs
 
 #define COLS  (CHARS*CHAR_WIDTH)
@@ -216,6 +215,7 @@ void clearDots() {
   
 }
 
+volatile uint8_t spi=0;
 
 uint8_t isr_row = ROWS;  // Row to display on next update
 
@@ -271,7 +271,7 @@ void refreshRow()
   // Now the LEDs are off so we need to run full blast. The longer they are off, the dimmer they will appear. 
 
 //spiCount = 3; // TODO: TEsting only
-  
+
   while (spiCount--) {
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
@@ -285,7 +285,7 @@ void refreshRow()
       }
         
   }
-
+  
   // note that spiBufferPtr will naturally point to the next row here, and keeps on decrementing though the full buffer acorss all rows
 
 	// turn on the row of LEDs... (also sets clock and data low)
@@ -339,11 +339,17 @@ void refreshRow()
 
     if (packetFlag) {     // New packet available in serial buffer?
 
+      // TODO: Just update a pointer rather than mempying the whole thing over
+
       memcpy( spiBuffer , readBuffer , BUFFER_SIZE );   // Copy the entire buffer even though it might not be full just to keep timing consistant
       packetFlag =0;
 
       UDR0 = 'V';    // Signal back to the controller that we just started displaying the pending packets so ok to send the next one. 
 
+    } else {
+
+      UDR0 = 'H';    // Signal back to the controller that we just did a repeat frame refresh
+      
     }
 	}
 
@@ -421,6 +427,32 @@ void setup() {
 
 
 void loop() {
+
+  /*
+
+  for( int c=0; c< COLS; c+=2 ) {
+
+    for( int r=0; r<ROWS; r++ ) {
+
+      setDot( r ,c );
+      
+    }
+    
+  }
+
+  while (1) {
+
+    spi=0;
+    delay(500);
+    spi=1;
+    delay(500);
+
+    
+  }
+
+  */
+
+  
 
     for( int c = 0; demoMode && c< COLS ; c++ ) {
         
