@@ -17,7 +17,7 @@
 
 #include "font5x7.h"
 
-#define FRAME_RATE 80
+#define FRAME_RATE 60
 
 #define ROWS 7
 
@@ -59,7 +59,7 @@ volatile uint8_t packetFlag=0;      // 1=new packet waiting in readBuffer
 
 volatile uint8_t demoMode = 1;      // Start in demo mode. Automatically turns off when we recieve a good frame from serial port.
 
-unsigned long demoCount = 0 ;
+
 
 inline void pushSerialByte( unsigned char c) {   // Put a byte into the serial buffer
 
@@ -165,11 +165,40 @@ void SPI_MasterInit(void)
     /* Set MOSI,SCK,SS output */
     DDR_SPI |= (1<<DD_MOSI)|(1<<DD_SCK) | (1<<DD_SS);    
 
-    SPSR |= _BV(SPI2X);         // Double time! Clock now at 8Mhz
-  
-    /* Enable SPI, Master, set clock rate 4Mhz */
-    SPCR = (1<<SPE)|(1<<MSTR);
 
+    // 8mhz
+    /* Enable SPI, Master, set clock rate 8Mhz */
+    //SPCR = (1<<SPE)|(1<<MSTR);  
+    //SPSR =  _BV(SPI2X);
+
+    //4mhz
+    /* Enable SPI, Master, set clock rate 4Mhz */
+    //SPCR = (1<<SPE)|(1<<MSTR);
+    //SPSR =  0;
+    
+
+    //2Mhz
+    /* Enable SPI, Master, set clock rate 2Mhz */
+    //SPCR |= (1<<SPE)|(1<<MSTR) | (1<<SPR0);
+    //SPSR =  _BV(SPI2X);
+
+    //1Mhz
+    /* Enable SPI, Master, set clock rate 2Mhz */
+    SPCR |= (1<<SPE)|(1<<MSTR) | (1<<SPR0);
+    SPSR =  0;
+
+    //500Khz
+    /* Enable SPI, Master, set clock rate 2Mhz */
+    //SPCR |= (1<<SPE)|(1<<MSTR) | (1<<SPR1);
+    //SPSR =  _BV(SPI2X);
+    
+
+    //250Khz
+    /* Enable SPI, Master, set clock rate 2Mhz */
+    //SPCR |= (1<<SPE)|(1<<MSTR) | (1<<SPR1);
+    //SPSR =  0;
+
+        
     SPDR = 0;     // Send a dummy byte to prime the pump so that the interrupt bit will be set when we go to send the first real byte. 
     
 }
@@ -190,6 +219,8 @@ inline void SPI_MasterTransmit(char cData)
     
   //} while (SPSR & _BV(WCOL));
  while(!(SPSR & (1<<SPIF)));  
+
+ 
 
   // TODO: Blind send on the SPI to maximize output speed. Just need to count clock cycles to make sure we don't overrrun.
   
@@ -239,7 +270,7 @@ uint16_t spiBufferPtr = PADDED_COLS * ROWS;      // Where are we in the buffer -
 // (63us/row SPI) / (10us/byte serial) ~= 6 bytes serial/row SPI
 // We will make the mini buffer much bigger since we have planety of room and the SPI is not 100% fast 
 
-unsigned char miniBuffer[100];                                           
+unsigned char miniBuffer[BUFFER_SIZE];                                           
 
 // Called from timer interrupt to refresh the next row of the LED display
 
@@ -277,7 +308,7 @@ void refreshRow()
 
       SPI_MasterTransmit( spiBuffer[--spiBufferPtr] );      // (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
 
-      if ( UCSR0A & _BV( RXC0 ) ) {    // If a char is available, save it for later. We only need to check for one char becuase we knw that the serial port is running slower than the SPI port so never more than ! byte serial ready for each SPI pass
+      while ( UCSR0A & _BV( RXC0 ) ) {    // If a char is available, save it for later. We only need to check for one char becuase we knw that the serial port is running slower than the SPI port so never more than ! byte serial ready for each SPI pass
 
         unsigned char c = UDR0;
 
@@ -402,6 +433,19 @@ void showNumber( int x , unsigned long int n ) {
 }
 
 
+int lenInt(unsigned long x) {
+    if(x>=1000000000) return 10;
+    if(x>=100000000) return 9;
+    if(x>=10000000) return 8;
+    if(x>=1000000) return 7;
+    if(x>=100000) return 6;
+    if(x>=10000) return 5;
+    if(x>=1000) return 4;
+    if(x>=100) return 3;
+    if(x>=10) return 2;
+    return 1;
+}
+
 void setup() {
 
   
@@ -508,6 +552,7 @@ void loop() {
 
     }
 
+    
     // Cross hatch left
 
     SYNC();
@@ -526,7 +571,7 @@ void loop() {
 
     }
 
-    delay(750);
+    delay(2000);
 
     // Cross hatch right
     
@@ -548,21 +593,24 @@ void loop() {
 
     }
 
-    delay(750);
-
+    delay(2000);
+    
     // Up counter
+
+    unsigned long demoCount = 0 ;    
 
     while (demoMode) {
 
+      for( int x=0; demoMode && (x< ( COLS - ( 7 * lenInt( demoCount ) ) )) ; x++ ) {
+
         SYNC();
-        SYNC();
-        
         clearDots();
-        showNumber( 0, demoCount++ );
-        
+        showNumber( x, demoCount++ );
+
+      }
+      
     }
 
-   
     while (1);      // EVerything now happens over ISR, so We do nothing...
     
 }
