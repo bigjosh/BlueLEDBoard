@@ -355,11 +355,11 @@ void refreshRow()
       
       if (! (dimPatterns[dimSetting] & (1<<dimcount) ) ) {      // Are off LEDs off right now?
 
-        if ( spiCount < (60/8) ) {
+        if ( spiCount < (30/8) ) {
 
           SPDR = 0;
           
-        } else if (spiCount == (60/8) ) {
+        } else if (spiCount == (30/8) ) {
           
           SPDR = spiByte & 0b11110000;
           

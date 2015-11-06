@@ -282,11 +282,6 @@ uint16_t spiBufferPtr = PADDED_COLS * ROWS;      // Where are we in the buffer -
 unsigned char miniBuffer[BUFFER_SIZE];                                           
 
 
-// TODO: Dimtest code
-static unsigned char dimcount=0;
-#define DIMCOUNTTOP 2
-
-
 // Called from timer interrupt to refresh the next row of the LED display
 
 void refreshRow()
@@ -321,24 +316,7 @@ void refreshRow()
 
   while (spiCount--) {
 
-      // Start dimmer test...
-      
-      if (!dimcount && spiCount<=((60/8)+1) ) {      
-        
-        SPDR = 0x00;
-        
-      } else {
-   
-        SPDR = spiBuffer[--spiBufferPtr];      // Start transmitting the next SPI byte (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
-
-      }
-
-      /// end dimmer test
-
-      // TODO: Normal code...
-      //SPDR = spiBuffer[--spiBufferPtr];      // Start transmitting the next SPI byte (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
-
-      
+      SPDR = spiBuffer[--spiBufferPtr];      // Start transmitting the next SPI byte (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
 
       while(!(SPSR & (1<<SPIF))) {             // Waiting for SPI transmit to complete
 
@@ -420,12 +398,6 @@ void refreshRow()
       
     }
 
-    dimcount++;
-    if (dimcount == DIMCOUNTTOP ) {
-
-      dimcount =0;
-    }
-    
 	}
 
 }
