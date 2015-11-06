@@ -37,6 +37,12 @@ struct timeval lastSend = { 0,0 };
 #define MINIMUM_SEND_DELAY_MS 200			// Current boards run at 80 FPS, so this gives a little extra room between updates
 
 
+void purgeSerial() {
+	
+	lseek( fd , 0 , SEEK_END );
+	
+}
+
 void sendDots() {
 
 	int dotCount = 0;
@@ -185,7 +191,32 @@ char *timestring() {
 		
 }
 
+#define PATH_MAX 200
+char pingString[PATH_MAX];
+int pingRun=0;
 
+const char *ping() {
+	FILE *fp;
+	int status;
+	
+	if (pingRun) return( pingString );
+	
+	fp = popen("ping -c 1 google.com | tail -2", "r");
+	if (fp == NULL) {
+		/* Handle error */;
+		return("[popen error]");			
+	}
+	
+	
+	while (fgets(pingString, PATH_MAX, fp) != NULL);	
+	
+	status = pclose(fp);
+	
+	pingRun=1;
+	
+	return( pingString );
+		
+}
 
 // Returns length of result in pixels
 
@@ -212,8 +243,9 @@ int drawString( int x , const char *s ) {
 						strech = *s - '0';
 						s++;
 					}
-					break;
+					
 				}  
+				break;
 				
 				case 'T': {				// Insert time
 				
@@ -222,6 +254,17 @@ int drawString( int x , const char *s ) {
 					xoffset += padding;
 					
 				}
+				break;
+
+				case 'G': {				// Ping Google...
+				
+					s++;
+					xoffset += drawString( x+xoffset , ping() );
+					xoffset += padding;
+					
+				}
+				break;
+
 				
 			}		
 			
@@ -266,6 +309,8 @@ int main(int argc, char **argv)
 	const char*message = argv[2];
 
 	while (1) {
+		
+		pingRun=0;		// Only run ping once per cycle
 
 //		sprintf( message ,  MESSAGE  , argv[1] , timestring() );		// Wasted, just to get the length 
 
