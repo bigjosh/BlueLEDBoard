@@ -17,7 +17,7 @@
 
 #include "font5x7.h"
 
-#define FRAME_RATE 80
+#define FRAME_RATE 100
 
 #define ROWS 7
 
@@ -284,8 +284,36 @@ unsigned char miniBuffer[BUFFER_SIZE];
 
 // TODO: Dimtest code
 static unsigned char dimcount=0;
-#define DIMCOUNTTOP 2
 
+static volatile unsigned char dimSetting=0;
+
+#define DIMMODES 8
+
+static const unsigned int dimPatterns[DIMMODES] = {
+  
+    0b00000000,
+    0b00000001,
+    0b00010001,
+    0b10010010,
+    0b11011011,
+    0b11101110,
+    0b11111110,
+    0b11111111,
+};
+
+/*
+unsigned char dimBits[BUFFER_SIZE];     // SPI bit are anding with this to do dimming
+
+void setupDimBits() {
+
+  for(int i=60; i<COLS;i++ ) {      // test string has 1st 60 cols should be dimmer
+
+    dimBits[ i/8 ] |= 1 << ( i - (i/8)) ;
+
+  }
+}
+
+*/
 
 // Called from timer interrupt to refresh the next row of the LED display
 
@@ -322,15 +350,28 @@ void refreshRow()
   while (spiCount--) {
 
       // Start dimmer test...
+
+      unsigned char spiByte = spiBuffer[--spiBufferPtr];      // Start transmitting the next SPI byte (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
       
-      if (!dimcount && spiCount<=((60/8)+1) ) {      
-        
-        SPDR = 0x00;
-        
+      if (! (dimPatterns[dimSetting] & (1<<dimcount) ) ) {      // Are off LEDs off right now?
+
+        if ( spiCount < (60/8) ) {
+
+          SPDR = 0;
+          
+        } else if (spiCount == (60/8) ) {
+          
+          SPDR = spiByte & 0b11110000;
+          
+        } else {
+
+          SPDR = spiByte;
+          
+        }
+              
       } else {
    
-        SPDR = spiBuffer[--spiBufferPtr];      // Start transmitting the next SPI byte (pre-decrement indirect addressing faster in AVR), also works becuase first bit sent gets shifted to rightmost dot on display
-
+        SPDR = spiByte;
       }
 
       /// end dimmer test
@@ -341,7 +382,6 @@ void refreshRow()
       
 
       while(!(SPSR & (1<<SPIF))) {             // Waiting for SPI transmit to complete
-
                                                // Interrupts are off, so we need to keep checking to see if any serial bytes came in
       
         while ( UCSR0A & _BV( RXC0 ) ) {      // If any serial chars are available. 
@@ -421,7 +461,7 @@ void refreshRow()
     }
 
     dimcount++;
-    if (dimcount == DIMCOUNTTOP ) {
+    if (dimcount == 8 ) {
 
       dimcount =0;
     }
@@ -491,7 +531,6 @@ int lenInt(unsigned long x) {
 
 void setup() {
 
-  
   // put your setup code here, to run once:
 
   //if (F_CPU == 16000000) clock_prescale_set(clock_div_1);  // For trinket - switch to full speed 16mhz prescaler
@@ -540,7 +579,108 @@ void loop() {
 
   */
 
+
+  // Dimming demo...
+
+  while (1) {
+
+    // Cross hatch left
   
+      SYNC();
+  
+      for( int r=0; demoMode && r<ROWS; r++ ) {
+  
+        for( int c=0; demoMode && c< COLS;c++ ) {
+  
+            if ( (r+c) & 1 ) {
+              setDot( r , c );
+            } else {
+              clearDot( r , c );
+            }
+            
+        }
+  
+      }
+  
+    
+      for( int d=1; d<DIMMODES; d++ ) {
+  
+        dimSetting = d;
+  
+          delay(2000);
+          
+      }
+  
+        
+      // Cross hatch right
+  
+      SYNC();
+  
+      for( int r=0; demoMode && r<ROWS; r++ ) {
+  
+        for( int c=0; demoMode && c< COLS;c++ ) {
+  
+            if ( (r+c) & 1 ) {
+              clearDot( r , c );
+            } else {
+              setDot( r , c );
+              
+            }
+            
+        }
+  
+      }
+
+      for( int d=1; d<DIMMODES; d++ ) {
+  
+        dimSetting = d;
+  
+          delay(2000);
+          
+      }
+
+
+      // full lit
+  
+      SYNC();
+  
+      for( int r=0; demoMode && r<ROWS; r++ ) {
+  
+        for( int c=0; demoMode && c< COLS;c++ ) {
+  
+            setDot( r , c );
+              
+          
+            
+        }
+  
+      }
+
+      for( int d=1; d<DIMMODES; d++ ) {
+  
+        dimSetting = d;
+  
+          delay(2000);
+          
+      }
+
+      SYNC();
+      clearDots();
+      showNumber( 20, 1234567890 );
+
+      for( int d=1; d<DIMMODES; d++ ) {
+  
+        dimSetting = d;
+  
+          delay(2000);
+          
+      }
+
+    }
+
+        
+
+   /// Full lit  
 
     for( int c = 0; demoMode && c< COLS ; c++ ) {
         
