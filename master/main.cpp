@@ -38,9 +38,12 @@ struct timeval lastSend = { 0,0 };
 
 
 void purgeSerial() {
-	
-	lseek( fd , 0 , SEEK_END );
-	
+	int flags = fcntl(fd, F_GETFL, 0);
+	fcntl(fd, F_SETFL, flags | O_NONBLOCK);			// Turn off blocking
+	char dummy;
+	while( read(fd, &dummy, 1) > 0 );					// Keep reading any pending bytes in the buffer until none left
+	fcntl(fd, F_SETFL, flags );						// Set the flags back to what they were before we went non-blocking
+		
 }
 
 void sendDots() {
@@ -212,8 +215,10 @@ const char *ping() {
 	
 	status = pclose(fp);
 	
+	sleep(1000);			// Pause for at least 1 second so it doesn't just look jerky
 	pingRun=1;
-	
+	purgeSerial();			// That could have taking a sec, so clear any pening vertical refresh signals that came in while we waited to avoid jerking
+
 	return( pingString );
 		
 }
@@ -259,7 +264,9 @@ int drawString( int x , const char *s ) {
 				case 'G': {				// Ping Google...
 				
 					s++;
-					xoffset += drawString( x+xoffset , ping() );
+					
+					const char *p = ping();		// Get the ping message
+					xoffset += drawString( x+xoffset , p );
 					xoffset += padding;
 					
 				}
