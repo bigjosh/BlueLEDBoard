@@ -36,7 +36,7 @@ void setRow( int row ) {
     
 }
 
-#define DELAY 100   // 10 ms
+#define DELAY 100000   //us
 
 
 void loop() {
