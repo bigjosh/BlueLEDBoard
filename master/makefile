@@ -1,12 +1,9 @@
 CC=gcc
 CFLAGS=-I.
-DEPS = BlueManLEDMaster
-OBJ = main.o demo.o 
 
-%.o: %.c $(DEPS)
+blueled: blueled.cpp blueled.h
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-master: $(OBJ)
-	gcc -o $@ $^ $(CFLAGS)
+blueled: blueled.o
+	gcc -o blueled blueled.o $(CFLAGS)
 	chmod +x $@ 
-
