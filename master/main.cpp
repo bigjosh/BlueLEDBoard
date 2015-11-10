@@ -204,7 +204,7 @@ const char *ping() {
 	
 	if (pingRun) return( pingString );
 	
-	fp = popen("ping -c 1 google.com | tail -2", "r");
+	fp = popen(" (ping -c 1  google.com || echo Fail )  | tail -1", "r");    // This mess is to handle the case where the ping fails, so the OR goes to the echo. Really linux, really there is no Way to have ping output just the results?
 	if (fp == NULL) {
 		/* Handle error */;
 		return("[popen error]");			
@@ -219,9 +219,15 @@ const char *ping() {
 	pingRun=1;
 	purgeSerial();			// That could have taking a sec, so clear any pening vertical refresh signals that came in while we waited to avoid jerking
 
+  if (status) return("Failed!"); 
 	return( pingString );
 		
 }
+
+// remeber the device name passed on the command arg
+
+const char *devArg;
+
 
 // Returns length of result in pixels
 
@@ -260,6 +266,16 @@ int drawString( int x , const char *s ) {
 					
 				}
 				break;
+
+				case 'D': {				// Insert device name 
+				
+					s++;
+					xoffset += drawString( x+xoffset , devArg );
+					xoffset += padding;
+					
+				}
+				break;
+
 
 				case 'G': {				// Ping Google...
 				
@@ -309,9 +325,11 @@ int main(int argc, char **argv)
 	}
 	else {
 		printf("Success opening serial device %s\r\n", argv[1]);
+   
+    devArg = argv[1];
 	}
 
-//	sleep(1000); 		// Let bootloader timeout
+sleep(1000); 		// Let bootloader timeout
 
 	const char*message = argv[2];
 
