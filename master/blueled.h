@@ -14,7 +14,6 @@
 
 #define BUFFER_SIZE (PADDED_COLS/8)*ROWS
 
-
 extern unsigned char dots[ROWS][PADDED_COLS];
 
 void sendDots();

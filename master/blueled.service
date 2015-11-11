@@ -1,0 +1,13 @@
+[Unit]
+Description=Startup all connected blueled boards
+#After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/blueledrunall.sh
+Type=forking
+#Restart=on-abort
+#User=pi
+
+[Install]
+WantedBy=multi-user.target
+
