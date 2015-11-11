@@ -1,0 +1,1 @@
+This is a very long string to see how well the treansition between frames is working on the blueled display board. Let see!

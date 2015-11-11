@@ -40,8 +40,10 @@ void purgeSerial() {
 		
 }
 
+unsigned int lag=1;             // Number of syncs between scrolling steps
+
 // Serialize the dot buffer out the Serial port
-// Waits for the next sync pulse to actuall send
+// Waits for the next sync pulse to actually send
 
 void sendDots() {
 
@@ -90,7 +92,9 @@ void sendDots() {
 	// This depending on the non-intuitive behavior of read which is that it will
 	// block until at leat 1 byte is available.
 
-	read(fd, &c, 1);
+	for(unsigned int i=lag; i>0; i--) {             // Wait for _lag_ many syncs
+        read(fd, &c, 1);
+    }        
 	
 	// Ok, all clear to send a new frame buffer	
 
@@ -120,6 +124,9 @@ void clear() {
 
 }
 
+
+// TODO: Import font at runtime from file
+// Permit variable width
 
 int draw5x7(int x, char c, int strech) {
 
@@ -218,12 +225,14 @@ const char *ping() {
 		
 }
 
-// remeber the device name passed on the command arg
+// remember the device name passed on the command arg
 
 const char *devArg;
 
 
+// Draw the string starting at col x
 // Returns length of result in pixels
+
 
 #define DEFAULT_CHAR_PADDING 1
 
@@ -236,11 +245,17 @@ int drawString( int x , const char *s ) {
 	
 	while (*s) {
 		
-		if (*s == '*' && *(s+1) != '*' ) {			// * = Command, except 2 *'s means just a *
-		
+		if (*s == '*' ) {
+        
 			s++;
 			
 			switch (*s) {
+                
+                case '*': {                // Two *'s just means escape out a single *
+                    s++;
+                    xoffset += draw5x7(x+xoffset, '*' , strech);
+                }
+                break;                    
 				
 				case 'S': 	{			// Set strech
 					s++;
@@ -248,7 +263,7 @@ int drawString( int x , const char *s ) {
 						strech = *s - '0';
 						s++;
 					} else {
-                       xoffset += drawString( x+xoffset , " [*S without strech value] " ); 
+                       xoffset += drawString( x+xoffset , " [*S without strech amount] " ); 
                     }
 					
 				}  
@@ -268,6 +283,38 @@ int drawString( int x , const char *s ) {
 					
 				}
 				break;
+                
+				case 'L': {				// Scroll lag
+    				
+    				s++;
+    				
+    				if (isdigit(*s)) {
+                        lag = (*s) - '0';
+                        s++;
+                    } else {
+                        xoffset += drawString( x+xoffset , " [*L without lag digit] " );                        
+    				}
+
+    				
+				}
+				break;
+                
+				case 'P': {				// Interchar padding
+    				
+    				s++;
+    				
+    				if (isdigit(*s)) {
+        				padding = (*s) - '0';
+        				s++;
+        			} else {
+            			xoffset += drawString( x+xoffset , " [*P without padding digit] " );
+        			}
+
+        				
+    			}
+    			break;
+                
+                
 
 				case 'D': {				// Insert device name 
 				
@@ -307,143 +354,134 @@ int drawString( int x , const char *s ) {
 		
 }
 
+// Draw the string repeasedly to the left until the display is full
+// x is the col where you want to stop drawing. The end of the string will stop there.
+// if x<=0 then nothing is drawn
+
+void drawStringFillLeft( int x , int len, const char *s ) {
+	
+	if (len==0) return;		// Special case: we can never fill using a zero len string
+	
+	while (x>0) {
+		
+		x-=len;
+		
+		drawString( x , s );
+				
+	}
+	
+}
+
+void drawStringFillRight( int x , int len, const char *s ) {
+
+	if (len==0) return;		// Special case: we can never fill using a zero len string
+	
+	while (x<COLS) {
+				
+		drawString( x , s );
+		
+		x+= len;
+				
+	}
+	
+}
+
+
 int main(int argc, char **argv)
 {
-	printf("Blueman master controller Serial LED Driver\r\n");
+	printf("BlueMan master controller Serial LED Driver\r\n");
 	
 	if (argc!=3) {
-		printf( "Usage: master device arg1=path to connected serial device, arg2=message to send\r\n");
+		printf( "Usage: blueled deviceName messagefile\n\r");
+        printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
+		printf("        messagefile is the name of a file with the message to scroll\r\n");
+        printf("        Reads a series of display strings from stdin and pumps them to the LED display\r\n");
 		return(2);
 	}
 
-	//f = fopen(argv[1], "w+b");
 
 	fd = open(argv[1] , O_RDWR );
-//	fd = open(argv[1], O_BINARY | _O_RDWR);
 
 	if (fd == -1 ) {
 		printf("failed to open serial device %s\r\n", argv[1]);
 		return(1);
-	}
-	else {
-		printf("Success opening serial device %s\r\n", argv[1]);
-   
-    devArg = argv[1];
+	} else {
+		printf("Success opening serial device %s\r\n", argv[1]);   
+        devArg = argv[1];
 	}
 
-sleep(1000); 		// Let bootloader timeout
+    sleep(1000); 		// Let bootloader timeout
 
-	const char*message = argv[2];
+	char *prevMessage = (char *)malloc(1);		// Keep a copy of the previous message for smooth transitions
+	prevMessage[0]=0x00;
+	int prevWidth=0;
+	
+    size_t len = 0;
 
-	while (1) {
+    purgeSerial();  // start fresh to avoid jerks
+
+    while (1) {
 		
-		pingRun=0;		// Only run ping once per cycle
+		FILE *f = fopen( argv[2] , "r");
+		
+		if (!f) {
+			printf("Could not open %s.\r\n", argv[2]);
+			exit(3);
+		}
 
-//		sprintf( message ,  MESSAGE  , argv[1] , timestring() );		// Wasted, just to get the length 
+		// Find length of file		
+		fseek(f, 0L, SEEK_END);
+		int messageLen = ftell(f);
+		
+		//Go backj to begining
+		fseek(f, 0L, SEEK_SET);
+				
+		char *message = (char *)malloc( messageLen );
+		
+		if (!message) {
+			printf("Malloc failed!\r\n");
+			return(4);
+		} 
+		
+		fread(message, 1 , messageLen , f );
+		
+		fclose(f);
+				
+		pingRun=0;		// Only run ping once per cycle
+        lag=1;          // Default normal scroll speed
 
 		int width = drawString( 0 , message );
-
-		for(int s = COLS ; s > (COLS-width) ; s--) {		// Start of rightmost copy of message
-	
-//			sprintf( message ,  MESSAGE  , argv[1] , timestring() );		// Wasted, just to get the length 
-
-			int x = s;
-						
+					
+		// First we transision from the previous message to the new none
+		// we always end with the last message col of the message on the last col of the display, so pick up from there using the previous message 
+		
+		for( int s= COLS; s >0 ; s-- ) {
 			clear();
-			
-			// Fill the screen starting from the right side intil we run off the left
+			drawStringFillLeft( s , prevWidth , prevMessage );
+			drawStringFillRight( s , width , message );
+			sendDots();
+		}
+		
+		// Ok, now we are past the end of the previous message, now scroll out just the new message
+		
 
-			while (x > (-width) ) {		// Draw copies to fill  whole string
+		for(int s = 0 ; s > (COLS-width) ; s--) {		// Start of rightmost copy of message
 
-				x -= drawString( x , message );
-
-			}
-
+			clear();
+			drawStringFillRight( s , width , message );
 			sendDots();
 
-//			sleep( 100 );
-
-//			printf("Sent %s\r\n", argv[1]);
-
-//			sleep(1000);
-
 		}
-
+		
+		free(prevMessage);
+		prevMessage=message;
+		prevWidth=width;
+		
 	}
-
-
-	while (1) {
-
-		demo();
-
-
-		clear();
-		for (int i = 0; i < ROWS; i++) {
-
-
-			dots[i][i*2] = 1;
-		}
-		sendDots();
-		sleep(3000);
-
-		for (int c = 0; c < COLS; c++) {
-
-			for (int r = 0; r < ROWS; r++) {
-
-				dots[r][c] = 1;
-
-			}
-
-			sendDots();
-
-			//printf("c=%d\r\n", c);
-
-			//_sleep(100);
-
-		}
-
-
-		for (int c = 0; c < COLS; c++) {
-
-			for (int r = 0; r < ROWS; r++) {
-
-				dots[r][c] = 0;
-
-			}
-
-			sendDots();
-
-		}
-
-		for (int r = 0; r < ROWS; r++) {
-
-			for (int c = 0; c < COLS; c++) {
-
-				dots[r][c] = 1;
-			}
-
-			sendDots();
-
-			sleep(100);
-
-
-		}
-
-		for (int r = 0; r < ROWS; r++) {
-
-			for (int c = 0; c < COLS; c++) {
-
-				dots[r][c] = 0;
-			}
-
-			sendDots();
-
-			sleep(100);
-
-
-		}
-	}
-
+	
+	// Never get here
+    
+    free(prevMessage);
+    
 	return 0;
 }
-
