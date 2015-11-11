@@ -22,11 +22,6 @@
 unsigned char dots[ROWS][PADDED_COLS];
 
 
-#define COMMAND_NULL    0x00  // Do nothing. We can then send a bunch of these in a row to resync.  
-#define COMMAND_DISPLAY 0xFF  // Put the last recieved data on the display
-#define COMMAND_REBOOT  0xFE  // Reboot if the bytes in the buffer match the string "BOOT"
-
-
 int fd;			// File desriptor for the serial port
 
 unsigned char buffer[BUFFER_SIZE];
@@ -34,8 +29,7 @@ unsigned char buffer[BUFFER_SIZE];
 struct timeval lastSend = { 0,0 };
 
 
-#define MINIMUM_SEND_DELAY_MS 200			// Current boards run at 80 FPS, so this gives a little extra room between updates
-
+// Clean out any pending bytes in the serial read buffer 
 
 void purgeSerial() {
 	int flags = fcntl(fd, F_GETFL, 0);
@@ -45,6 +39,9 @@ void purgeSerial() {
 	fcntl(fd, F_SETFL, flags );						// Set the flags back to what they were before we went non-blocking
 		
 }
+
+// Serialize the dot buffer out the Serial port
+// Waits for the next sync pulse to actuall send
 
 void sendDots() {
 
@@ -161,16 +158,13 @@ int draw5x7(int x, char c, int strech) {
 
 //#define MESSAGE "This string of LEDs is connected to port %s of the master controller. It is currently <STRFTIME=%A %B %d, %Y at %r %Z>.   "
 
-
-
 #define TIMESTRINGLEN 100		// Just a conservative guess
-
-#define TIMESTRINGFORMAT1 "%A %B %d, %Y at %I:%M:%S %p %Z"
-#define TIMESTRINGFORMAT2 "%A %B %d, %Y at %I %M %S %p %Z"
 
 char timestringBuffer[TIMESTRINGLEN];
 
-char *timestring() {
+char speciferBuffer[] = { '%' , '_' , 0x00} ;    // The _ will be replaced with a char
+
+const char *timestring( char specifier ) {
 	
 		time_t t;
 
@@ -179,18 +173,18 @@ char *timestring() {
 		struct timeval start;	
 		
 		gettimeofday(&start, NULL);
+   
+    speciferBuffer[1] = specifier;
 		
-		if ( start.tv_usec>500000UL) {
-				
-				strftime( timestringBuffer , TIMESTRINGLEN , TIMESTRINGFORMAT1 , localtime( &t ) );
-				
-		} else {
-			
-				strftime( timestringBuffer , TIMESTRINGLEN , TIMESTRINGFORMAT2 , localtime( &t ) );
-			
-		} 	
-							
-		return( timestringBuffer );
+    if (strftime( timestringBuffer , TIMESTRINGLEN , speciferBuffer , localtime( &t ) ) ) {
+											
+		  return( timestringBuffer );
+        
+    } else {
+        
+        return( "" );
+        
+    }
 		
 }
 
@@ -250,10 +244,12 @@ int drawString( int x , const char *s ) {
 				
 				case 'S': 	{			// Set strech
 					s++;
-					if (1 ||isdigit(*s)) {
+					if (isdigit(*s)) {
 						strech = *s - '0';
 						s++;
-					}
+					} else {
+                       xoffset += drawString( x+xoffset , " [*S without strech value] " ); 
+                    }
 					
 				}  
 				break;
@@ -261,8 +257,14 @@ int drawString( int x , const char *s ) {
 				case 'T': {				// Insert time
 				
 					s++;
-					xoffset += drawString( x+xoffset , timestring() );
-					xoffset += padding;
+                    
+                    if (isalpha(*s)) {
+					    xoffset += drawString( x+xoffset , timestring( *(s++) ) );
+					    xoffset += padding;
+                    } else {
+                        xoffset += drawString( x+xoffset , " [*T without format value] " );
+                    }                        
+
 					
 				}
 				break;
