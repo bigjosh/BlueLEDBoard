@@ -125,6 +125,12 @@ void clear() {
 
 #define DISPLAY_COLS COLS			// Definate this seporately in case we have a string different length than the definated buffer size
 
+#if (DISPLAY_COLS > PADDED_COLS)
+
+	#error The display cols must be less than the size of the buffer or we will get corruptions
+
+#endif
+
 // TODO: Import font at runtime from file
 // Permit variable width
 
@@ -407,7 +413,7 @@ int main(int argc, char **argv)
     size_t len = 0;
 
     purgeSerial();  // start fresh to avoid jerks
-
+	
     while (1) {
 		
 		FILE *f = fopen( argv[2] , "r");
@@ -424,7 +430,8 @@ int main(int argc, char **argv)
 		//Go backj to begining
 		fseek(f, 0L, SEEK_SET);
 				
-		char *message = (char *)malloc( messageLen );
+		char *message = (char *)malloc( messageLen + 1 );			// Save room for null terminator
+		
 		
 		if (!message) {
 			printf("Malloc failed!\r\n");
@@ -432,14 +439,17 @@ int main(int argc, char **argv)
 		} 
 		
 		fread(message, 1 , messageLen , f );
+		message[messageLen]=0x00;						// Make null terminated string
 		
 		fclose(f);
+
 
 		pingRun=0;		// Only run ping once per cycle
         lag=1;          // Default normal scroll speed
 
 		// Dummy draw just to get the pixel width
 		int width = drawString( 0 , message );
+		
 		
 		// On the first frame of each pass, the 1st col of the message will be in the last col of the display
 		// On the last frame of each pass, the last col of the message will be in the last col of the display 
