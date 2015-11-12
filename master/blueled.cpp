@@ -21,7 +21,6 @@
 
 unsigned char dots[ROWS][PADDED_COLS];
 
-
 int fd;			// File desriptor for the serial port
 
 unsigned char buffer[BUFFER_SIZE];
@@ -124,6 +123,7 @@ void clear() {
 
 }
 
+#define DISPLAY_COLS COLS			// Definate this seporately in case we have a string different length than the definated buffer size
 
 // TODO: Import font at runtime from file
 // Permit variable width
@@ -147,7 +147,7 @@ int draw5x7(int x, char c, int strech) {
 		
 			int dotCol = x + xoffset; 
 	
-			if (dotCol >= 0 && dotCol < COLS) {				// Check clipping rectangle
+			if (dotCol >= 0 && dotCol < DISPLAY_COLS) {				// Check clipping rectangle
 	
 				for (int row = 0; row < 7 ; row++) {
 	
@@ -270,7 +270,7 @@ int drawString( int x , const char *s ) {
 						strech = *s - '0';
 						s++;
 					} else {
-                       xoffset += drawString( x+xoffset , " [S without strech amount] " ); 
+                       xoffset += drawString( x+xoffset , " [S without strech amount] " ); 	// Dont put a * in the error message or you get an infinate loop
                     }
 					
 				}  
@@ -375,21 +375,6 @@ void drawStringFillLeft( int x , int len, const char *s ) {
 	
 }
 
-void drawStringFillRight( int x , int len, const char *s ) {
-
-	if (len==0) return;		// Special case: we can never fill using a zero len string
-	
-	while (x<COLS) {
-				
-		drawString( x , s );
-		
-		x+= len;
-				
-	}
-	
-}
-
-
 int main(int argc, char **argv)
 {
 	printf("BlueMan master controller Serial LED Driver\r\n");
@@ -449,31 +434,37 @@ int main(int argc, char **argv)
 		fread(message, 1 , messageLen , f );
 		
 		fclose(f);
-				
+
 		pingRun=0;		// Only run ping once per cycle
         lag=1;          // Default normal scroll speed
 
+		// Dummy draw just to get the pixel width
 		int width = drawString( 0 , message );
+		
+		// On the first frame of each pass, the 1st col of the message will be in the last col of the display
+		// On the last frame of each pass, the last col of the message will be in the last col of the display 
+		// This way there is a seamless transision from pass to pass
+		// We also repeast the message to fill in the gap if the message is shorter than the display
+		// We also keep the previous message to scroll that off and to have a seamless transision between messages.  
 					
 		// First we transision from the previous message to the new none
 		// we always end with the last message col of the message on the last col of the display, so pick up from there using the previous message 
 		
-		for( int s= COLS; s >0 ; s-- ) {
+		for( int s= DISPLAY_COLS-1; (s > 0) && ( s>= DISPLAY_COLS-width)  ; s-- ) {		// Keep drawing until the prev message is off the display or until the new message is fully on the display
 			clear();
 			drawStringFillLeft( s , prevWidth , prevMessage );
-			drawStringFillRight( s , width , message );
+			drawString( s , message );
 			sendDots();
 		}
 		
 		// Ok, now we are past the end of the previous message, now scroll out just the new message
 		
 
-		for(int s = 0 ; s > (COLS-width) ; s--) {		// Start of rightmost copy of message
+		for(int s = 0 ; s >= (DISPLAY_COLS-width) ; s--) {		// Start of rightmost copy of message
 
 			clear();
-			drawStringFillRight( s , width , message );
+			drawString( s , message );
 			sendDots();
-
 		}
 		
 		free(prevMessage);

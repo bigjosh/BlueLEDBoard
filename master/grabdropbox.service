@@ -1,0 +1,7 @@
+[Unit]
+Description=Grab new messages files from dropbox service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/grabdropbox.sh
+

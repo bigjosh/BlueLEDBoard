@@ -17,6 +17,7 @@ cp blueled /usr/local/bin
 chmod +x *.sh
 
 cp blueled*.sh /usr/local/bin 
+cp grabdropbox.sh /usr/local/bin
 
 if [ ! -e /etc/blueled ]; then
   mkdir /etc/blueled
@@ -28,11 +29,13 @@ fi
 
 #copy the serive unit files to the right place
 sudo cp blueled.service $(pkg-config systemd --variable=systemdsystemunitdir)
+sudo cp grabdropbox.service $(pkg-config systemd --variable=systemdsystemunitdir)
+sudo cp grabdropbox.timer $(pkg-config systemd --variable=systemdsystemunitdir)
 #force a reload in case we are overwriting existing files with new versions
 sudo systemctl daemon-reload
 #set the service to run on boot
 sudo systemctl enable blueled
-
+sudo systemctl enable grabdropbox.timer
 
 if [ ! -e /etc/blueled/portlist ]; then
    # Assumes all ports are in /dev/ttyUSB?. Might not be true if you are using different hardware than the normal USB serial ocypuses.
