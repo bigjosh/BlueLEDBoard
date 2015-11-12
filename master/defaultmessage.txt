@@ -1,1 +1,1 @@
-If you are seeing this message, then we were not able to download the live message from Dropbox.com. This string of LEDs is connected to port *D of the master controller. It is currently *T. Pinging Google...*G. 
+If you are seeing this message, then we were not able to download the live message from Dropbox.com. This string of LEDs is connected to port *D of the master controller. It is currently *TD. Pinging Google...*G. 

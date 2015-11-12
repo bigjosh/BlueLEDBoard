@@ -21,5 +21,5 @@ if [ -e /tmp/blueled/$1/pid ]; then
 fi 
 
 stty -F /dev/$1 1000000 raw clocal -hupcl -echo
-blueled /dev/$1  </tmp/blueled/$1/message.txt &
+blueled /dev/$1  /tmp/blueled/$1/message.txt &
 echo $! >/tmp/blueled/$1/pid

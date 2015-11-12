@@ -130,7 +130,14 @@ void clear() {
 
 int draw5x7(int x, char c, int strech) {
 
-	unsigned char *rowbits = &Font5x7[ (c - 0x20) * 5 ];
+	unsigned char *rowbits;
+	
+	if ( c<0x20 || c>0x80 ) {					// Only try supported chars to avoidarray  out of bounds. Also ignores line feeds/cr/
+		return(0);
+		
+	}
+	
+	rowbits = &Font5x7[ (c - 0x20) * 5 ];
 	
 	int xoffset =0; 	// current col 
 	
@@ -181,17 +188,17 @@ const char *timestring( char specifier ) {
 		
 		gettimeofday(&start, NULL);
    
-    speciferBuffer[1] = specifier;
+    	speciferBuffer[1] = specifier;
 		
-    if (strftime( timestringBuffer , TIMESTRINGLEN , speciferBuffer , localtime( &t ) ) ) {
+    	if (strftime( timestringBuffer , TIMESTRINGLEN , speciferBuffer , localtime( &t ) ) ) {
 											
 		  return( timestringBuffer );
         
-    } else {
+    	} else {
         
-        return( "" );
+        	return( "" );
         
-    }
+    	}
 		
 }
 
@@ -252,18 +259,18 @@ int drawString( int x , const char *s ) {
 			switch (*s) {
                 
                 case '*': {                // Two *'s just means escape out a single *
-                    s++;
+					s++;
                     xoffset += draw5x7(x+xoffset, '*' , strech);
                 }
                 break;                    
 				
 				case 'S': 	{			// Set strech
 					s++;
-					if (isdigit(*s)) {
+					if (*s && isdigit(*s)) {
 						strech = *s - '0';
 						s++;
 					} else {
-                       xoffset += drawString( x+xoffset , " [*S without strech amount] " ); 
+                       xoffset += drawString( x+xoffset , " [S without strech amount] " ); 
                     }
 					
 				}  
@@ -272,12 +279,13 @@ int drawString( int x , const char *s ) {
 				case 'T': {				// Insert time
 				
 					s++;
-                    
-                    if (isalpha(*s)) {
-					    xoffset += drawString( x+xoffset , timestring( *(s++) ) );
+					
+                    if (*s && isalpha(*s)) {						
+					    xoffset += drawString( x+xoffset , timestring( *s ) );
 					    xoffset += padding;
+						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [*T without format value] " );
+                        xoffset += drawString( x+xoffset , " [T without format value] " );
                     }                        
 
 					
@@ -286,13 +294,12 @@ int drawString( int x , const char *s ) {
                 
 				case 'L': {				// Scroll lag
     				
-    				s++;
-    				
-    				if (isdigit(*s)) {
-                        lag = (*s) - '0';
-                        s++;
+					s++;
+    				if (*s && isdigit(*s)) {
+                        lag = *s - '0';
+						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [*L without lag digit] " );                        
+                        xoffset += drawString( x+xoffset , " [L without lag digit] " );                        
     				}
 
     				
@@ -300,14 +307,12 @@ int drawString( int x , const char *s ) {
 				break;
                 
 				case 'P': {				// Interchar padding
-    				
     				s++;
-    				
-    				if (isdigit(*s)) {
-        				padding = (*s) - '0';
-        				s++;
+    				if (*s && isdigit(*s)) {
+        				padding = *s - '0';
+						s++;
         			} else {
-            			xoffset += drawString( x+xoffset , " [*P without padding digit] " );
+            			xoffset += drawString( x+xoffset , " [P without padding digit] " );
         			}
 
         				
@@ -317,7 +322,6 @@ int drawString( int x , const char *s ) {
                 
 
 				case 'D': {				// Insert device name 
-				
 					s++;
 					xoffset += drawString( x+xoffset , devArg );
 					xoffset += padding;
@@ -327,9 +331,7 @@ int drawString( int x , const char *s ) {
 
 
 				case 'G': {				// Ping Google...
-				
-					s++;
-					
+					s++;		
 					const char *p = ping();		// Get the ping message
 					xoffset += drawString( x+xoffset , p );
 					xoffset += padding;
@@ -341,6 +343,7 @@ int drawString( int x , const char *s ) {
 			}		
 			
 		} else {
+			
 
 			xoffset+=draw5x7(x+xoffset, *s , strech);
 	

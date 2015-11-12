@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 #One time install the blueled system
+#can also be run non-destrucively to update executables
 #must be run with sudo
+
+# Make sure only root can run our script
+if [ "$(id -u)" != "0" ]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
 
 #build the executable
 make
