@@ -131,23 +131,158 @@ void clear() {
 
 #endif
 
+typedef struct {
+	
+	int width;					// index to the starting byte in cols[] for this char. The first byte holds the start in cols of the first col of data. Skip to the next index byte to find when it ends
+	unsigned char *cols;		// the actual bit data for each col. Malloced as char loaded since we don't know the width ahead of time. 
+	
+} chartype;
+
+								// a font is an array of 256 chartypes, indexed by ascii. A null cols[] indicates the char is undefined
+
+int parseHexDigit( char c ) {
+	if (isxdigit(c)) {
+		if (isdigit(c)) {
+			return( c - '0');
+		} else {
+			return( tolower(c) -'a' + 10);
+		}
+	} else {
+		return(0);
+	}	
+}
+
+#define ONPIXELS "*#@Xx"
+
+// Returns null on error
+
+chartype *importFont( const char *fname ) {
+
+	FILE *f = fopen( fname , "r" );
+	if (!f) {
+		printf(  "Could not open font file %s\r\n",fname);
+		return(NULL);
+	}
+	
+	chartype *font = (chartype *) calloc( 256 , sizeof( chartype));
+	
+	
+	if (!font) {
+		printf(  "Could not allocate font memory\r\n");
+		return(NULL);		
+	}
+
+	char * line = NULL;
+	size_t len = 0;
+	ssize_t read;
+		
+	unsigned c=0;  
+	int r=0;									// Current Row	
+	
+    while ((read = getline(&line, &len, f)) != -1) {
+		
+//		printf("Retrieved line of length %zu :\n", read);
+//		printf("[%c]:>%s<", line[0] , line);
+		
+		
+		if ( line[0] !='#' ) {		// ignore comments 
+		
+		
+			if ( !strncmp(  "CHAR=" , line , 5 ) ) {			// New char?
+			
+			
+				if (isxdigit( line[5] ) && isxdigit(line[6] )) {
+					
+					c =  (parseHexDigit(  line[5] ) * 16 ) + parseHexDigit( line[6]) ;															
+					r =0;
+									
+				} 
+				
+			} else {			// read bit data
+			
+				if (r==0) {			// first row of new char
+								
+					// First discover the width of this new char
+				
+					int w=0;		
+					
+					for(int l=0; l<strlen(line);l++) {
+						if (isprint( line[l])) {						
+							w=l+1;
+						}
+					}
+										
+					font[c].width = w;
+					
+					if (font[c].cols != NULL ) {
+						
+						free( font[c].cols );			// So we don't leak mem incase this char was defined multipule times 
+					}
+					
+					font[c].cols = (unsigned char *) calloc( w , 1 ); 
+					
+					// Ok, the new char slot is all set up
+					
+				}
+				
+				if (r<7) {			// Reading in rows?
+				
+					for(int col=0; col< font[c].width ;col++) {
+						
+						if ( strchr( ONPIXELS , line[col] )) {
+							
+							font[c].cols[col] |= (1<<r);
+						}
+					}					
+					
+					r++;	
+				}
+				
+								
+			}
+			
+			
+		}
+	}
+	
+	fclose(f);
+	
+	if (line) {
+		free(line);
+	}
+       
+	return(font);
+	
+}
+
+static unsigned char undefinedCharCols[] = {0x7F, 0x41, 0x41, 0x41, 0x7F}; 	// A box that looks like this []	
+
+static chartype undefinedChar = {
+	5, 	
+	undefinedCharCols	
+};
+
 // TODO: Import font at runtime from file
 // Permit variable width
 
-int draw5x7(int x, char c, int strech) {
+int draw5x7(int x, char c, int strech , chartype *font) {
 
-	unsigned char *rowbits;
 	
-	if ( c<0x20 || c>0x80 ) {					// Only try supported chars to avoidarray  out of bounds. Also ignores line feeds/cr/
-		return(0);
-		
+	chartype *thisChar = &font[c];
+			
+	if (thisChar->cols == NULL )	{ 		// Undefined char
+	
+		thisChar = &undefinedChar;			// SHow the block
+	
 	}
 	
-	rowbits = &Font5x7[ (c - 0x20) * 5 ];
-	
+	int width = thisChar->width;
+			
 	int xoffset =0; 	// current col 
 	
-	for (int col = 0; col < 5; col++) {
+	for (int col = 0; col < width; col++) {
+		
+		unsigned char rowbits = thisChar->cols[col];
 		
 		for( int s = 0; s<strech; s++ )	{			// Strech
 		
@@ -157,7 +292,7 @@ int draw5x7(int x, char c, int strech) {
 	
 				for (int row = 0; row < 7 ; row++) {
 	
-					if (*rowbits & (1 << row)) {
+					if ( rowbits & (1 << row)) {
 	
 						dots[row][dotCol] = 1;
 	
@@ -167,8 +302,6 @@ int draw5x7(int x, char c, int strech) {
 			
 			xoffset++;
 		}
-
-		rowbits++;
 
 	}
 	
@@ -249,7 +382,7 @@ const char *devArg;
 
 #define DEFAULT_CHAR_PADDING 1
 
-int drawString( int x , const char *s ) {
+int drawString( int x , const char *s , chartype *font ) {
 	
 	int strech =1;
 	int padding = DEFAULT_CHAR_PADDING;
@@ -266,7 +399,7 @@ int drawString( int x , const char *s ) {
                 
                 case '*': {                // Two *'s just means escape out a single *
 					s++;
-                    xoffset += draw5x7(x+xoffset, '*' , strech);
+                    xoffset += draw5x7(x+xoffset, '*' , strech , font );
                 }
                 break;                    
 				
@@ -276,7 +409,7 @@ int drawString( int x , const char *s ) {
 						strech = *s - '0';
 						s++;
 					} else {
-                       xoffset += drawString( x+xoffset , " [S without strech amount] " ); 	// Dont put a * in the error message or you get an infinate loop
+                       xoffset += drawString( x+xoffset , " [S without strech amount] " , font ); 	// Dont put a * in the error message or you get an infinate loop
                     }
 					
 				}  
@@ -287,11 +420,11 @@ int drawString( int x , const char *s ) {
 					s++;
 					
                     if (*s && isalpha(*s)) {						
-					    xoffset += drawString( x+xoffset , timestring( *s ) );
+					    xoffset += drawString( x+xoffset , timestring( *s ) , font );
 					    xoffset += padding;
 						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [T without format value] " );
+                        xoffset += drawString( x+xoffset , " [T without format value] " , font );
                     }                        
 
 					
@@ -305,7 +438,7 @@ int drawString( int x , const char *s ) {
                         lag = *s - '0';
 						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [L without lag digit] " );                        
+                        xoffset += drawString( x+xoffset , " [L without lag digit] " , font );                        
     				}
 
     				
@@ -318,7 +451,7 @@ int drawString( int x , const char *s ) {
         				padding = *s - '0';
 						s++;
         			} else {
-            			xoffset += drawString( x+xoffset , " [P without padding digit] " );
+            			xoffset += drawString( x+xoffset , " [P without padding digit] " , font );
         			}
 
         				
@@ -329,7 +462,7 @@ int drawString( int x , const char *s ) {
 
 				case 'D': {				// Insert device name 
 					s++;
-					xoffset += drawString( x+xoffset , devArg );
+					xoffset += drawString( x+xoffset , devArg , font );
 					xoffset += padding;
 					
 				}
@@ -339,7 +472,7 @@ int drawString( int x , const char *s ) {
 				case 'G': {				// Ping Google...
 					s++;		
 					const char *p = ping();		// Get the ping message
-					xoffset += drawString( x+xoffset , p );
+					xoffset += drawString( x+xoffset , p , font );
 					xoffset += padding;
 					
 				}
@@ -351,7 +484,7 @@ int drawString( int x , const char *s ) {
 		} else {
 			
 
-			xoffset+=draw5x7(x+xoffset, *s , strech);
+			xoffset+=draw5x7(x+xoffset, *s , strech , font );
 	
 			xoffset += padding;
 			
@@ -367,7 +500,7 @@ int drawString( int x , const char *s ) {
 // x is the col where you want to stop drawing. The end of the string will stop there.
 // if x<=0 then nothing is drawn
 
-void drawStringFillLeft( int x , int len, const char *s ) {
+void drawStringFillLeft( int x , int len, const char *s , chartype *font ) {
 	
 	if (len==0) return;		// Special case: we can never fill using a zero len string
 	
@@ -375,16 +508,93 @@ void drawStringFillLeft( int x , int len, const char *s ) {
 		
 		x-=len;
 		
-		drawString( x , s );
+		drawString( x , s , font );
 				
 	}
 	
 }
 
+
+
+// A utility function to dump a font to a text file on stdout
+
+void dumpFont( chartype *font) {
+	
+	
+	printf(
+			"# This is a blueled font file.\r\n"
+			"# Lines that start with a hash are ignored. Blank lines not part of char data also ignored.\r\n"
+			"# A char definition starts with CHAR= followed by the ascii code as a 2 digit hex number.\r\n"
+			"# All chars are 7 pixels high and can be variable width.\r\n"
+			"# The width of the first line of pixels estabishes the width of the char.\r\n"
+			"# The following are all seen as on pixels: * X x @\r\n"
+			"# Anything else besides a space is considered an off pixel\r\n"
+			"# \r\n"
+	);
+			
+	for( int b =0; b <256; b++ ) {
+		
+		if (font[b].cols != NULL) {				// defined char?
+
+			if (isprint(b)) {
+				printf("#%x hex = '%c'\r\n",b,b);
+			} else {
+				printf("#%x hex = (unprintable)\r\n",b);				
+			}		
+			printf("CHAR=%x\r\n",b);
+			
+			
+			int left=0;
+			int right=font[b].width-1;
+			
+			// Trim blank cols from the left
+			// Exploits the fact that blank cols have no bits set so are arethmically 0
+			// we do left < right rather then <= so that we are always left with at least 1 blank col 
+			
+			while (left<right && font[b].cols[left]==0 ) {
+				left++;
+			}
+			
+			// Trim blank cols from the left
+			// Exploits the fact that blank cols have no bits set so are arethmically 0 
+			
+			while (left<right && font[b].cols[right]==0 ) {
+				right--;
+			}
+			
+			unsigned char *cols = font[b].cols;
+			
+			for(int r=0;r<7;r++) {
+				
+				for(int c=left; c<=right;c++) {
+					
+					int p = font[ b ].cols[c]  & (1<<r);
+					
+					if (p) {
+						printf("X");
+						
+					} else {
+						printf(".");					
+					}				
+				
+				}
+				printf("\r\n");					
+			}
+			
+			printf("\r\n");
+					
+		}			
+	}	
+	
+}
+
+
 int main(int argc, char **argv)
 {
 	printf("BlueMan master controller Serial LED Driver\r\n");
 	
+//	dumpFont();
+//	exit(0);
 	if (argc!=3) {
 		printf( "Usage: blueled deviceName messagefile\n\r");
         printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
@@ -393,7 +603,18 @@ int main(int argc, char **argv)
 		return(2);
 	}
 
+	chartype *font = importFont( "/etc/blueled/Font1.txt");
+	
+	if (!font) {
+		printf( "Could not import font from file %s.\r\n", "Font1.txt");		
+		exit(5);
+	}
 
+	/*	
+	dumpFont( font );
+	exit(0);
+	*/
+	
 	fd = open(argv[1] , O_RDWR );
 
 	if (fd == -1 ) {
@@ -427,6 +648,7 @@ int main(int argc, char **argv)
 		fseek(f, 0L, SEEK_END);
 		int messageLen = ftell(f);
 		
+	
 		//Go backj to begining
 		fseek(f, 0L, SEEK_SET);
 				
@@ -448,7 +670,7 @@ int main(int argc, char **argv)
         lag=1;          // Default normal scroll speed
 
 		// Dummy draw just to get the pixel width
-		int width = drawString( 0 , message );
+		int width = drawString( 0 , message , font );
 		
 		
 		// On the first frame of each pass, the 1st col of the message will be in the last col of the display
@@ -462,8 +684,8 @@ int main(int argc, char **argv)
 		
 		for( int s= DISPLAY_COLS-1; (s > 0) && ( s>= DISPLAY_COLS-width)  ; s-- ) {		// Keep drawing until the prev message is off the display or until the new message is fully on the display
 			clear();
-			drawStringFillLeft( s , prevWidth , prevMessage );
-			drawString( s , message );
+			drawStringFillLeft( s , prevWidth , prevMessage , font );
+			drawString( s , message , font );
 			sendDots();
 		}
 		
@@ -473,7 +695,7 @@ int main(int argc, char **argv)
 		for(int s = 0 ; s >= (DISPLAY_COLS-width) ; s--) {		// Start of rightmost copy of message
 
 			clear();
-			drawString( s , message );
+			drawString( s , message , font );
 			sendDots();
 		}
 		

@@ -27,6 +27,10 @@ if [ ! -e /etc/blueled/defaultmessage.txt ]; then
     cp defaultmessage.txt /etc/blueled/
 fi
 
+if [ ! -e /etc/blueled/Font1.txt ]; then
+    cp Font1.txt.txt /etc/blueled/
+fi
+
 #copy the serive unit files to the right place
 sudo cp blueled.service $(pkg-config systemd --variable=systemdsystemunitdir)
 sudo cp grabdropbox.service $(pkg-config systemd --variable=systemdsystemunitdir)
