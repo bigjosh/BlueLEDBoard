@@ -16,7 +16,6 @@
 
 
 #include "blueled.h"
-#include "font5x7.h"
 
 
 unsigned char dots[ROWS][PADDED_COLS];
@@ -593,6 +592,21 @@ int main(int argc, char **argv)
 {
 	printf("BlueMan master controller Serial LED Driver\r\n");
 	
+	if (argc<2) {
+		printf("no device file speficied.\r\n");
+		
+	}	
+	
+	fd = open(argv[1] , O_RDWR );
+	
+	if (fd == -1 ) {
+			printf("failed to open serial device %s\r\n", argv[1]);
+			return(1);
+	} else {
+			printf("Success opening serial device %s\r\n", argv[1]);
+			devArg = argv[1];
+	}
+
 //	dumpFont();
 //	exit(0);
 	if (argc!=3) {
@@ -615,17 +629,6 @@ int main(int argc, char **argv)
 	exit(0);
 	*/
 	
-	fd = open(argv[1] , O_RDWR );
-
-	if (fd == -1 ) {
-		printf("failed to open serial device %s\r\n", argv[1]);
-		return(1);
-	} else {
-		printf("Success opening serial device %s\r\n", argv[1]);   
-        devArg = argv[1];
-	}
-
-    sleep(1000); 		// Let bootloader timeout
 
 	char *prevMessage = (char *)malloc(1);		// Keep a copy of the previous message for smooth transitions
 	prevMessage[0]=0x00;
