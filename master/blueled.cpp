@@ -607,8 +607,33 @@ int main(int argc, char **argv)
 			devArg = argv[1];
 	}
 
+	
+	if (argc == 3) {
+		
+		if (argv[2][0]=='-' && argv[2][1]=='C') {	// Fill a single Col
+			int c = atoi( argv[2] + 2 );
+			clear();
+			if (c<0 || c>=DISPLAY_COLS) {
+				printf("Col %d is out of bounds 0-%d, no col lit...\r\n", c , DISPLAY_COLS);
+			} else {
+			
+				printf("Lighting col %d...",c);
+				for(int r=0;r<ROWS;r++) {
+					dots[r][c] = 1;
+				}
+			
+			}
+			
+			sendDots();
+			printf("done.\r\n");
+			exit(0);
+			
+		}
+	}
+	
 //	dumpFont();
 //	exit(0);
+
 	if (argc!=3) {
 		printf( "Usage: blueled deviceName messagefile\n\r");
         printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
