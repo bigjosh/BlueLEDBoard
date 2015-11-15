@@ -612,23 +612,47 @@ int main(int argc, char **argv)
 		
 		if (argv[2][0]=='-' && argv[2][1]=='C') {	// Fill a single Col
 			int c = atoi( argv[2] + 2 );
+      
 			clear();
-			if (c<0 || c>=DISPLAY_COLS) {
-				printf("Col %d is out of bounds 0-%d, no col lit...\r\n", c , DISPLAY_COLS);
-			} else {
+		
+			int start=c*10;
+			int end=start+10;
+			printf("Lighting col %d-%d...", start , end );
 			
-				printf("Lighting col %d...",c);
-				for(int r=0;r<ROWS;r++) {
-					dots[r][c] = 1;
-				}
-			
+			for(int x=start; x< end;x++) {
+					for(int r=0;r<ROWS;r++) {
+							if (x>=0 && x<DISPLAY_COLS) {                    
+								dots[r][x] = 1;
+							}
+					}
 			}
-			
+						
 			sendDots();
 			printf("done.\r\n");
 			exit(0);
-			
+					
 		}
+	
+
+		if (argv[2][0]=='-' && argv[2][1]=='R') {	// Fill a single Col
+			int r = atoi( argv[2] + 2 );
+      
+			clear();
+		
+			printf("Lighting row %d...", r );
+
+			if (r>=0 && r<ROWS) {                    
+				for(int c=0; c<DISPLAY_COLS;c++) {
+					dots[r][c] = 1;
+				}
+			}
+						
+			sendDots();
+			printf("done.\r\n");
+			exit(0);
+					
+		}
+			
 	}
 	
 //	dumpFont();
