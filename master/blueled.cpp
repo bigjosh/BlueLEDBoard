@@ -587,6 +587,10 @@ void dumpFont( chartype *font) {
 	
 }
 
+void printDebug( const char *s ) {
+	
+	
+}
 
 int main(int argc, char **argv)
 {
@@ -602,11 +606,10 @@ int main(int argc, char **argv)
 	if (fd == -1 ) {
 			printf("failed to open serial device %s\r\n", argv[1]);
 			return(1);
-	} else {
-			printf("Success opening serial device %s\r\n", argv[1]);
-			devArg = argv[1];
 	}
-
+	
+	printDebug("Success opening serial device %s\r\n");
+	devArg = argv[1];
 	
 	if (argc == 3) {
 		
@@ -658,18 +661,20 @@ int main(int argc, char **argv)
 //	dumpFont();
 //	exit(0);
 
-	if (argc!=3) {
-		printf( "Usage: blueled deviceName messagefile\n\r");
+	if (argc!=4) {
+		printf( "Usage: blueled deviceName messagefile fontfile\n\r");
         printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
 		printf("        messagefile is the name of a file with the message to scroll\r\n");
         printf("        Reads a series of display strings from stdin and pumps them to the LED display\r\n");
 		return(2);
 	}
+	
+	printDebug("Reading font from %s....\r\n");
 
-	chartype *font = importFont( "/etc/blueled/Font1.txt");
+	chartype *font = importFont( argv[3] );
 	
 	if (!font) {
-		printf( "Could not import font from file %s.\r\n", "Font1.txt");		
+		printf( "Could not import font from file %s.\r\n", argv[3] );		
 		exit(5);
 	}
 
@@ -687,7 +692,11 @@ int main(int argc, char **argv)
 
     purgeSerial();  // start fresh to avoid jerks
 	
+	
     while (1) {
+
+		printDebug("Opening Message file...\r\n");
+
 		
 		FILE *f = fopen( argv[2] , "r");
 		
@@ -703,6 +712,9 @@ int main(int argc, char **argv)
 	
 		//Go backj to begining
 		fseek(f, 0L, SEEK_SET);
+		
+		printDebug("Mallocing memory....!\r\n");
+		
 				
 		char *message = (char *)malloc( messageLen + 1 );			// Save room for null terminator
 		
@@ -712,11 +724,18 @@ int main(int argc, char **argv)
 			return(4);
 		} 
 		
+		
+		printDebug("Reading message...\r\n");
+		
 		fread(message, 1 , messageLen , f );
 		message[messageLen]=0x00;						// Make null terminated string
+
+
+		printDebug("Closing message file...\r\n");
 		
 		fclose(f);
 
+		printDebug("Sizing width...\r\n");
 
 		pingRun=0;		// Only run ping once per cycle
         lag=1;          // Default normal scroll speed
@@ -734,6 +753,9 @@ int main(int argc, char **argv)
 		// First we transision from the previous message to the new none
 		// we always end with the last message col of the message on the last col of the display, so pick up from there using the previous message 
 		
+		
+		printDebug("Scrolling splice!\r\n");
+		
 		for( int s= DISPLAY_COLS-1; (s > 0) && ( s>= DISPLAY_COLS-width)  ; s-- ) {		// Keep drawing until the prev message is off the display or until the new message is fully on the display
 			clear();
 			drawStringFillLeft( s , prevWidth , prevMessage , font );
@@ -743,6 +765,7 @@ int main(int argc, char **argv)
 		
 		// Ok, now we are past the end of the previous message, now scroll out just the new message
 		
+		printDebug("Scrolling new message!\r\n");
 
 		for(int s = 0 ; s >= (DISPLAY_COLS-width) ; s--) {		// Start of rightmost copy of message
 

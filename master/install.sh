@@ -27,8 +27,8 @@ if [ ! -e /etc/blueled/defaultmessage.txt ]; then
     cp defaultmessage.txt /etc/blueled/
 fi
 
-if [ ! -e /etc/blueled/Font1.txt ]; then
-    cp Font1.txt /etc/blueled/
+if [ ! -e /etc/blueled/defaultfont.txt ]; then
+    cp defaultfont.txt /etc/blueled/
 fi
 
 #copy the serive unit files to the right place

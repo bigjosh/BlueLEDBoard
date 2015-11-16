@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-I.
 
-blueled: blueled.cpp blueled.h font5x7.h
+blueled: blueled.cpp blueled.h 
 	$(CC) -o $@ $< $(CFLAGS)
 	chmod +x $@ 
 
