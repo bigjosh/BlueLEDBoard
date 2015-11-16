@@ -16,6 +16,10 @@ cp blueled /usr/local/bin
 
 chmod +x *.sh
 
+#Stop any running instances to clear access to the files
+systemctl stop blueled.sh
+systemctl stop grabdropbox.timer
+
 cp blueled*.sh /usr/local/bin 
 cp grabdropbox.sh /usr/local/bin
 
@@ -47,5 +51,8 @@ if [ ! -e /etc/blueled/portlist ]; then
        basename $f >>/etc/blueled/portlist
    done
    echo "Please edit /etc/blueled/portlist and make sure it has the correct ports for actual attached controller boards"
-   echo "then reboot or execute _sudo systemctrl start blueled_ to start"   
+   echo "then reboot or execute...
+   echo  sudo systemctrl start blueled.service
+   echo  sudo systemctrl start  grabdropbox.timer
+   echo ..._ to start"   
 fi

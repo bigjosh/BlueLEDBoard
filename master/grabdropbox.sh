@@ -4,7 +4,7 @@
 #make a temp file to download into 
 
 dbget () {
-  if [ ! -e /tmp/blueled/$2 ]; then    ## Dont bother getting the file if port as now been set up
+  if [ -e /tmp/blueled/$2 ]; then    ## Dont bother getting the file if port as now been set up
   
     TMPFILE=`mktemp`
     wget "$1" -O $TMPFILE
