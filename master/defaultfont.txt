@@ -996,8 +996,8 @@ X...X
 X...X
 XXXXX
 
-#E9 hex = 'e`'
-CHAR=E9
+#8E hex = 'e`'
+CHAR=8E
 ...x.
 ..x..
 .XXX.

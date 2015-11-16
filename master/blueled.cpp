@@ -151,6 +151,11 @@ int parseHexDigit( char c ) {
 	}	
 }
 
+int parseHexByte( const char *s ) {
+	
+	return( (parseHexDigit( *s ) *16 ) + parseHexDigit( *(s+1)) );
+}
+
 #define ONPIXELS "*#@Xx"
 
 // Returns null on error
@@ -374,12 +379,10 @@ const char *ping() {
 
 const char *devArg;
 
+#define DEFAULT_CHAR_PADDING 1
 
 // Draw the string starting at col x
 // Returns length of result in pixels
-
-
-#define DEFAULT_CHAR_PADDING 1
 
 int drawString( int x , const char *s , chartype *font ) {
 	
@@ -398,9 +401,41 @@ int drawString( int x , const char *s , chartype *font ) {
                 
                 case '*': {                // Two *'s just means escape out a single *
 					s++;
-                    xoffset += draw5x7(x+xoffset, '*' , strech , font );
+                    xoffset += draw5x7(x+xoffset, '*' , strech , font  );
                 }
-                break;                    
+                break;       
+				
+				case 'X': {					// Hex code
+				
+					s++;
+					if (*s && isxdigit(*s) && isxdigit( *(s+1) )) {
+						unsigned char hexcode = parseHexByte( s );
+						s+=2;
+						xoffset+=draw5x7( x+xoffset , hexcode , strech , font );						
+					} else {
+						
+                       xoffset += drawString( x+xoffset , " [X bad hex byte] " , font ); 	// Dont put a * in the error message or you get an infinate loop
+						
+					}						
+				}    
+				break;         
+
+
+				case 'O': {					// Overstrike - Dont forget padding
+				
+			    s++;
+					if (*s && isdigit(*s)) {
+						int backtrack = *s - '0';
+						s++;
+						xoffset -= backtrack;
+					} else {
+						drawString( x+xoffset , " [B without digit] " , font ); 	// Dont put a * in the error message or you get an infinate loop
+					}
+								
+				}  
+        
+				break;
+        
 				
 				case 'S': 	{			// Set strech
 					s++;

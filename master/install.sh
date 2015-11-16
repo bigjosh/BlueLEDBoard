@@ -17,8 +17,8 @@ cp blueled /usr/local/bin
 chmod +x *.sh
 
 #Stop any running instances to clear access to the files
-systemctl stop blueled.sh
-systemctl stop grabdropbox.timer
+sudo systemctl stop blueled.sh
+sudo systemctl stop grabdropbox.timer
 
 cp blueled*.sh /usr/local/bin 
 cp grabdropbox.sh /usr/local/bin
