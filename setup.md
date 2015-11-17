@@ -10,4 +10,4 @@
 4. Repeat steps 2 & 3 for each of the 8 daughterboards and controller cards.
 3.	Plug the two USB Serial cables into the two free ports on the Pi. It doesn’t matter which plug goes in which USB socket. 
 4.	Connect a pigtail to a USB serial cable DB9, using a serial cable if necessary. It doesn’t matter which pigtail goes to which DB9. Assuming the Wifi connection in step #1 was good, when you plug it in you should see a scrolling test message on the LEDs. If you don’t see the test message and you are using a serial cable, try adding a null-modem on either end of the serial cable (but not both).  You can also try connecting the pigtail directly into the USB cable DB9 if it will reach. Repeat for all 8 daughterboards.
-5.	If you have all the cables hooked up and see test messages on all the strings, then all clear to mount everything. Try to keep everything running while you are mounting to immediately notice if anything gets messed up. 
+5.	If you have all the cables hooked up and see good test messages on all the strings, then all clear to mount everything. Try to keep everything running while you are mounting to immediately notice if anything gets messed up. 

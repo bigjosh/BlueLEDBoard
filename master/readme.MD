@@ -1,4 +1,4 @@
-# master
+# blueled
 
 The actual software that drives an LED string. Pass the filename of the serial device (typically something like `/dev/ttyUSBx`), the message you want to display, and the font file.
 

@@ -32,14 +32,14 @@ The software running on the daughterboard has an internal display buffer that ke
 
 The daughterboard is also constantly listening for new incoming data on the serial port that is uses to update the internal display buffer.
 
-Daughterboard firmware is  available [here](Daughterboard%20PCB/firmware/Arduino/BlueLEDBoard) as an Arduino IDE style package. Note that you can actually download the firmward directly to a daughterboard over the serial connections using the Arduin IDE- just set the Arduino port to the serial port that the daughter board is connected to and the board type to "Uno". 
+Daughterboard firmware is  available [here](Daughterboard%20PCB/firmware/Arduino/BlueLEDBoard) as an Arduino IDE style package. Note that you can actually download the firmware directly to a daughterboard over the serial connections using the Arduin IDE- just set the Arduino port to the serial port that the daughter board is connected to and the board type to "Uno". 
 ### Master Controller
-The daughter boards are connected via RS232 the the master controller software which runs on a Raspberry PI. This code orchestrates the activity for the entire installation and sends update to the individual strings as necessary.       
+The daughter boards are connected via RS232 the the master controller software which currently runs on a Raspberry PI. This code orchestrates the activity for the entire installation and sends update to the individual strings as necessary.       
 
-The master controller software is avialable [here](master/BlueManLEDMaster) as a Visual Stuido IDE style solution. Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
+The master controller software is avialable [here](master/BlueManLEDMaster). Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
 
 ### User Interface
-The Raspberry PI also hosts code that lets the user update the messages and schedule changes.  
+Currently there are scripts that run once per minute that download messages and fonts from a dropbox.com account. New messages are seamless spliced to the end of the currently running message. If a change in the font file is detected, all the connected strings are restarted with the updated font.  
 
 
 ## Connections

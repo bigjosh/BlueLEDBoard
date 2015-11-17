@@ -1,2 +1,1 @@
-These are just some helper java programs I used to dump the Space Invaders bitmaps. That are pure one-off hack - you have to edit the program to adjust values
-and then you copy/paste the generated text into the main C program. 
+These are just some helper java programs I used to dump the Space Invaders bitmaps. They are pure one-off hack - you have to edit the program to adjust values and then you copy/paste the generated text into the main C program. 
