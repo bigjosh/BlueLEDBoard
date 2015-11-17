@@ -411,7 +411,8 @@ int drawString( int x , const char *s , chartype *font ) {
 					if (*s && isxdigit(*s) && isxdigit( *(s+1) )) {
 						unsigned char hexcode = parseHexByte( s );
 						s+=2;
-						xoffset+=draw5x7( x+xoffset , hexcode , strech , font );						
+						xoffset+=draw5x7( x+xoffset , hexcode , strech , font );	
+					    xoffset += padding;											
 					} else {
 						
                        xoffset += drawString( x+xoffset , " [X bad hex byte] " , font ); 	// Dont put a * in the error message or you get an infinate loop
