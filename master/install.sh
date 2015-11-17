@@ -9,16 +9,17 @@ if [ "$(id -u)" != "0" ]; then
    exit 1
 fi
 
+#Stop any running instances to clear access to the files
+sudo systemctl stop blueled.service
+sudo systemctl stop grabdropbox.timer
+
+
 #build the executable
 make
 # Damn, I've read like 10 articles about where I *should* put the exeutable and cant figure out if this is right. Really linux?
 cp blueled /usr/local/bin
 
 chmod +x *.sh
-
-#Stop any running instances to clear access to the files
-sudo systemctl stop blueled.sh
-sudo systemctl stop grabdropbox.timer
 
 cp blueled*.sh /usr/local/bin 
 cp grabdropbox.sh /usr/local/bin
@@ -42,7 +43,7 @@ sudo cp grabdropbox.timer $(pkg-config systemd --variable=systemdsystemunitdir)
 #force a reload in case we are overwriting existing files with new versions
 sudo systemctl daemon-reload
 #set the service to run on boot
-sudo systemctl enable blueled
+sudo systemctl enable blueled.service
 sudo systemctl enable grabdropbox.timer
 
 if [ ! -e /etc/blueled/portlist ]; then

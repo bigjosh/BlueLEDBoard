@@ -402,6 +402,8 @@ int drawString( int x , const char *s , chartype *font ) {
                 case '*': {                // Two *'s just means escape out a single *
 					s++;
                     xoffset += draw5x7(x+xoffset, '*' , strech , font  );
+				    xoffset += padding;											
+					
                 }
                 break;       
 				
