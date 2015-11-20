@@ -5,6 +5,7 @@
 * Single sided board with minimum 1/32" trace clearance. Easily fabbed on a milling machine. 
 * Uses super cheap and widely avail bale  ATMEGA328p microcontroller for all functions. 
 * Less than $2 total parts cost.
+* Generates a series of tourture test patterns on startup that help to find problems durring setup.
 
 ## Fab
 
