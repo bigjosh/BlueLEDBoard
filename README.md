@@ -1,17 +1,31 @@
 # BlueLEDBoard
 
+Brain transplant for vintage Blue Man Group scrolling LED boards. 
 
-Brain transplant for vintage Blue Man Group scrolling LED boards. This code adds functionality while saving (and using!) almost all of the old hardware. 
-
-![Alt text](images/demo.jpg?raw=true)
+![Alt text](images/wall.jpg?raw=true)
 
 ## Demo
 
 https://www.youtube.com/watch?v=ddl3uFbX3zA
 
+## Highlights
+
+* Saves (and even uses!) almost all of the old hardware.
+* Easy to install into controller boards - pull the CPU chip out and plug the new daughterboard in. No modifications to the LED modules of connecting circuitry. 
+* Daughterboards communicate to master controller using standard off-the-shelf RS232 DB9 links, connectors, and cables.
+* Master controller can be any computer that supports RS232. Currently daughterboards are connected to a Windows machine for development and a Raspberry PI for deployment.
+* Timing-critical row and col scanning happens in hardware on the daughterboards. Master controller sends high-level frame bit maps. 
+* Daughterboards use hardware SPI to clock pixels out to LED modules at up to 8MHz.
+* Daughterboards emulate an Arduino, so you can seamlessly download firmware updates in-place over the existing serial connections using the Arduino IDE or automatically via command line with AVRDUDE.
+* The master controller software uses platform neural filenames for specifying daughterboard communication links, so highly portable. 
+* Master controller software dynamically reads messages from standard files, which can be updated in real-time. 
+* User defined fonts specified in easily editable text files. 
+* Extensible system for embedding display commands in messages files. 
+
+
 ## Hardware
 
-A custom daughter-board replaces the the CPU on each vintage 
+A custom daughter-board replaces the CPU on each vintage 
 controller card. This board takes over all the signals necessary to drive the LED strings. 
 
 The board includes a microprocessor that is responsible for the high-speed and timing critical task of constantly refreshing the LED display one row at a time.
@@ -28,25 +42,29 @@ All the design files and instructions for the daughterboards are [here](Daughter
 
 ### Daughterboard
 
-The software running on the daughterboard has an internal display buffer that keeps a bitmaped image of the pixels to be displayed on the LED string. It uses an internal timer to constantly send out clocked bitstreams to refresh the LEDs string one row at a time. 
+The software running on the daughterboard has an internal display buffer that keeps a bitmapped image of the pixels to be displayed on the LED string. It uses an internal timer to constantly send out clocked bitstreams to refresh the LEDs string one row at a time. 
 
 The daughterboard is also constantly listening for new incoming data on the serial port that is uses to update the internal display buffer.
 
-Daughterboard firmware is  available [here](Daughterboard%20PCB/firmware/Arduino/BlueLEDBoard) as an Arduino IDE style package. Note that you can actually download the firmware directly to a daughterboard over the serial connections using the Arduin IDE- just set the Arduino port to the serial port that the daughter board is connected to and the board type to "Uno". 
-### Master Controller
-The daughter boards are connected via RS232 the the master controller software which currently runs on a Raspberry PI. This code orchestrates the activity for the entire installation and sends update to the individual strings as necessary.       
+Daughterboard firmware is written in AVR GNU C and is available [here](Daughterboard%20PCB/firmware/Arduino/BlueLEDBoard) as an Arduino IDE style package. Note that you can actually download the firmware directly to a daughterboard over the serial connections using the Arduino IDE- just set the Arduino port to the serial port that the daughter board is connected to and the board type to "Uno". 
 
-The master controller software is avialable [here](master/BlueManLEDMaster). Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
+### Master Controller
+The daughterboards are connected via RS232 the master controller software which currently runs on a Raspberry PI. This code orchestrates the activity for the entire installation and sends update to the individual strings as necessary.       
+
+The master controller software written in standard C and is available [here](master/BlueManLEDMaster). Note the code can run on either a Windows or Linux master controller and a Linux `make` file is provided.
 
 ### User Interface
 Currently there are scripts that run once per minute that download messages and fonts from a dropbox.com account. New messages are seamless spliced to the end of the currently running message. If a change in the font file is detected, all the connected strings are restarted with the updated font.  
 
+These scripts are written in Linux BASH and run as systemd service and timer units. 
 
 ## Connections
 
 The connections between the daughterboards and the master controller are all straight RS232 running at 1Mbps. The daughterboards are DTEs and the master is DCE. The daughterboards can be plugged directly into the master if the wires reach, otherwise "extension" M-F cables can be used. You can also use standard pin-swapping RS232 cables if you also add a null modem at one end to switch the pins back.
 
-In normal operation, only 2 wires are needed to transmit image data from the master to the daughterboards. Both TX and RX connections are needed to support remote firmware upgrades, and the CTX line is needed to support automatic resetting of the daughterboards to initiate a firmware update cycle.   
+In normal operation, only TX and RX wires are needed. The master controller transmits image data to the daughter a frame at a time as a bitmap, and the daughterboard sends a single 'V' char back to the master controller after each vertical retrace to help synchronize frame delivery. 
+
+Both TX and RX connections are needed to support remote firmware upgrades, and the CTX line is needed to support automatic resetting of the daughterboards to initiate a firmware update cycle.   
 
 Currently the Raspberry PI master controller uses two of these USB to RS232 dongles to connect to all 8 daughterboards....
  
