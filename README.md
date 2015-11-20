@@ -22,6 +22,20 @@ https://www.youtube.com/watch?v=ddl3uFbX3zA
 * User defined fonts specified in easily editable flat text files. 
 * Extensible system for embedding display commands in messages files. 
 
+## Overview of operation
+
+1. Users edit message and font files and save them to a dropbox account. 
+2. The Raspberry Pi master controller uses an internet connection to download the messages and font file from dropbox once a minute.
+3. There is one copy of the mater controller software running for each string of LEDs. Each copy reads its messages and font files to generate a bitmap images of the on and off LED pixels for its attached string. 
+4. 80 times per second, each copy of the master controller software transmitts a single frame of  bitmapped pixel data to its  daughter board over the RS232 link. To synchronize these frame updates, each daughterboard transmitts a vertical refresh signal back to the master controller each time it completes a display refresh cycle. 
+5. Each daughter board keeps two buffers of pixel data - one that is actively being displayed and one that is being recieved from the master controller over the serial link. The two bufferes are swapped each time a full frame is recieved from the serial link.
+6. The daughterboard refreshes the display one row at a time based on the data in the current pixel buffer.
+7. To update a row, the daughterboard first turns of the previous row and then shifts the pxiels for the new row into the shift registers on the LED modules. It does this by putting the next pixel on the data line and toggling the clock line to shift all the short registers one stepo to the right. 
+8. When all of the pxiels for a row have been loaded into ther shift registers, the daughterboard turns the row on by activating the row drivers on the controller card.
+9. When the daughterboard gets to the end of the 7th (last) row, it sends a 'V' to the master controller. This lets the master control sync up to the refresh cycle to avoid visual tearing that could happen of the frame was updated partially though a refresh cycle. 
+
+
+
 ## Hardware
 
 A custom daughter-board replaces the CPU on each vintage 
