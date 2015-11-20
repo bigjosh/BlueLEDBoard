@@ -11,17 +11,16 @@ https://www.youtube.com/watch?v=ddl3uFbX3zA
 ## Highlights
 
 * Saves (and even uses!) almost all of the old hardware.
-* Easy to install into controller boards - pull the CPU chip out and plug the new daughterboard in. No modifications to the LED modules of connecting circuitry. 
+* Easy to install into vintage controller boards - just pull the CPU chip out and plug the new daughterboard in. No modifications to the LED modules or connecting circuitry. 
 * Daughterboards communicate to master controller using standard off-the-shelf RS232 DB9 links, connectors, and cables.
 * Master controller can be any computer that supports RS232. Currently daughterboards are connected to a Windows machine for development and a Raspberry PI for deployment.
 * Timing-critical row and col scanning happens in hardware on the daughterboards. Master controller sends high-level frame bit maps. 
 * Daughterboards use hardware SPI to clock pixels out to LED modules at up to 8MHz.
 * Daughterboards emulate an Arduino, so you can seamlessly download firmware updates in-place over the existing serial connections using the Arduino IDE or automatically via command line with AVRDUDE.
-* The master controller software uses platform neural filenames for specifying daughterboard communication links, so highly portable. 
-* Master controller software dynamically reads messages from standard files, which can be updated in real-time. 
-* User defined fonts specified in easily editable text files. 
+* The master controller software uses platform neural filenames for accessing daughterboard communication links, so highly portable. 
+* Master controller software dynamically reads messages from flat text files, which can be updated in real-time. 
+* User defined fonts specified in easily editable flat text files. 
 * Extensible system for embedding display commands in messages files. 
-
 
 ## Hardware
 
