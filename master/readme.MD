@@ -26,6 +26,8 @@ Command | Description
 `*Pn` | Set interchar padding. This is the number of blank pixels between adjacent chars and defaults to 1. `*P0` runs the letters into each other and `*P3` makes words look very sparse.
 `*D` | Inserts the name of the device this string is attacked to. Handy for debugging. 
 `*G` | Inserts  the current ping time to google.com. Also handy for debugging.
+`*Wss` | Waits for ss seconds . "*W02"=wait for 2 seconds. "*W00"=wait forever
+
 
 ##Font file
 

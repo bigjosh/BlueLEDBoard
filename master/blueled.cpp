@@ -6,13 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <string.h>			// memset on linux
+#include <string.h>		// memset on linux
 //#include <io.h>
 #include <fcntl.h>
 #include <time.h>
 #include <sys/time.h>	// gettimeofday
 #include <ctype.h>
 //#include <sys/time.h>		
+#include <unistd.h>		// sleep
 
 
 #include "blueled.h"
@@ -39,6 +40,7 @@ void purgeSerial() {
 }
 
 unsigned int lag=1;             // Number of syncs between scrolling steps
+unsigned int wait=0;			// number of seconds to wait between updates
 
 // Serialize the dot buffer out the Serial port
 // Waits for the next sync pulse to actually send
@@ -92,7 +94,15 @@ void sendDots() {
 
 	for(unsigned int i=lag; i>0; i--) {             // Wait for _lag_ many syncs
         read(fd, &c, 1);
-    }        
+    }       
+
+	if (wait) {
+		time_t doneTime = time(NULL) + wait;
+	
+		while (time(NULL)<doneTime) {
+			read(fd, &c, 1);			
+		}
+	}
 	
 	// Ok, all clear to send a new frame buffer	
 
@@ -417,7 +427,7 @@ int drawString( int x , const char *s , chartype *font ) {
 					    xoffset += padding;											
 					} else {
 						
-                       xoffset += drawString( x+xoffset , " [X bad hex byte] " , font ); 	// Dont put a * in the error message or you get an infinate loop
+                       xoffset += drawString( x+xoffset , " [ERR:**X bad hex byte] " , font ); 	// Dont put a * in the error message or you get an infinate loop
 						
 					}						
 				}    
@@ -432,7 +442,7 @@ int drawString( int x , const char *s , chartype *font ) {
 						s++;
 						xoffset -= backtrack;
 					} else {
-						drawString( x+xoffset , " [B without digit] " , font ); 	// Dont put a * in the error message or you get an infinate loop
+						drawString( x+xoffset , " [ERR:**B without digit] " , font ); 	// Dont put a * in the error message or you get an infinate loop
 					}
 								
 				}  
@@ -446,7 +456,7 @@ int drawString( int x , const char *s , chartype *font ) {
 						strech = *s - '0';
 						s++;
 					} else {
-                       xoffset += drawString( x+xoffset , " [S without strech amount] " , font ); 	// Dont put a * in the error message or you get an infinate loop
+                       xoffset += drawString( x+xoffset , " [ERR:**S without strech amount] " , font ); 	// Dont put a * in the error message or you get an infinate loop
                     }
 					
 				}  
@@ -461,7 +471,7 @@ int drawString( int x , const char *s , chartype *font ) {
 					    xoffset += padding;
 						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [T without format value] " , font );
+                        xoffset += drawString( x+xoffset , " [ERR:**T without format value] " , font );
                     }                        
 
 					
@@ -475,7 +485,7 @@ int drawString( int x , const char *s , chartype *font ) {
                         lag = *s - '0';
 						s++;
                     } else {
-                        xoffset += drawString( x+xoffset , " [L without lag digit] " , font );                        
+                        xoffset += drawString( x+xoffset , " [ERR:**L without lag digit] " , font );                        
     				}
 
     				
@@ -488,7 +498,7 @@ int drawString( int x , const char *s , chartype *font ) {
         				padding = *s - '0';
 						s++;
         			} else {
-            			xoffset += drawString( x+xoffset , " [P without padding digit] " , font );
+            			xoffset += drawString( x+xoffset , " [ERR:**P without padding digit] " , font );
         			}
 
         				
@@ -513,6 +523,33 @@ int drawString( int x , const char *s , chartype *font ) {
 					xoffset += padding;
 					
 				}
+				break;
+				
+				case 'W':	{			// Wait
+					s++;
+					
+					if ( isdigit(*s) && isdigit(*(s+1)) ) {						
+					
+						if (x+xoffset==0) { 	// Only actually do the Wait one time, when this col is leftmost
+					
+							const unsigned int secs= (( *s - '0' ) * 10 ) + ( *(s+1) - '0' );						
+							
+							wait = secs;
+							
+						} else {
+							
+							wait=0;
+							
+						}
+						
+						s+=2;		// Skip the digits
+							
+					} else {
+            			xoffset += drawString( x+xoffset , " [ERR:**W without 2 digit seconds count] " , font );						
+					}
+					
+				}
+				
 				break;
 
 				
@@ -626,8 +663,7 @@ void dumpFont( chartype *font) {
 }
 
 void printDebug( const char *s ) {
-	
-	
+	//printf(s);	
 }
 
 int main(int argc, char **argv)
