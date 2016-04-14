@@ -74,3 +74,9 @@ The `install.sh` script copies everything in the correct location and installs t
 
 The install script will not overwrite existing config files in `/etc/blueled` so it is safe to re-run it to re-install after any changes. 
 
+After the install script completes, you can reboot to start the processes, or do it manually by entering...
+
+```
+sudo systemctl start blueled.service
+sudo systemctl start grabdropbox.timer
+```
