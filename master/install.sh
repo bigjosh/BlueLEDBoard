@@ -53,7 +53,7 @@ if [ ! -e /etc/blueled/portlist ]; then
    done
    echo "Please edit /etc/blueled/portlist and make sure it has the correct ports for actual attached controller boards"
    echo "then reboot or execute...
-   echo  sudo systemctrl start blueled.service
-   echo  sudo systemctrl start  grabdropbox.timer
+   echo  sudo systemctl start blueled.service
+   echo  sudo systemctl start  grabdropbox.timer
    echo ..._ to start"   
 fi
