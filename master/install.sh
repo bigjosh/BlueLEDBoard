@@ -46,6 +46,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable blueled.service
 sudo systemctl enable grabdropbox.timer
 
+
 if [ ! -e /etc/blueled/portlist ]; then
    # Assumes all ports are in /dev/ttyUSB?. Might not be true if you are using different hardware than the normal USB serial ocypuses.
    for f in /dev/ttyUSB?; do 
@@ -53,7 +54,6 @@ if [ ! -e /etc/blueled/portlist ]; then
    done
    echo "Please edit /etc/blueled/portlist and make sure it has the correct ports for actual attached controller boards"
    echo "then reboot or execute...
-   echo  sudo systemctl start blueled.service
-   echo  sudo systemctl start  grabdropbox.timer
+
    echo ..._ to start"   
 fi
