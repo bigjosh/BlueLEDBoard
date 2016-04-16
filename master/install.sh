@@ -53,7 +53,7 @@ if [ ! -e /etc/blueled/portlist ]; then
        basename $f >>/etc/blueled/portlist
    done
    echo "Please edit /etc/blueled/portlist and make sure it has the correct ports for actual attached controller boards"
-   echo "then reboot or re-run install...
+   echo "then reboot or re-run install..."
 fi
 
 sudo systemctl start blueled.service
