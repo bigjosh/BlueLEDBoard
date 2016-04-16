@@ -39,6 +39,16 @@ void purgeSerial() {
 		
 }
 
+/*
+void D(const char *s) {
+	printf(s);
+}
+
+*/
+
+#define D(x)
+
+
 unsigned int lag=1;             // Number of syncs between scrolling steps
 unsigned int wait=0;			// number of seconds to wait between updates
 
@@ -50,6 +60,8 @@ void sendDots() {
 	int dotCount = 0;
 
 	unsigned char *p=buffer;
+
+	D("starting senddots\r\n");
 
 	for (int r= 0; r < ROWS; r++ ) {
 
@@ -82,6 +94,8 @@ void sendDots() {
 
 	}
 
+	D("Senddots2\r\n");
+
 	char c;
 
 	// Wait for sync form daughterboard so we send frames at correct speed
@@ -106,7 +120,12 @@ void sendDots() {
 	
 	// Ok, all clear to send a new frame buffer	
 
+	D("senddots prewrite\r\n");
+
 	write( fd,  buffer , BUFFER_SIZE  );
+
+	D("senddots postwrite\r\n");
+
 
 /*
 	struct timeval t;
@@ -403,7 +422,7 @@ int drawString( int x , const char *s , chartype *font ) {
 	
 	while (*s) {
 		
-		if (*s == '*' ) {
+		if ( *s == '*' ) {
         
 			s++;
 			
@@ -662,88 +681,45 @@ void dumpFont( chartype *font) {
 	
 }
 
-void printDebug( const char *s ) {
-	//printf(s);	
-}
 
 int main(int argc, char **argv)
 {
 	printf("BlueMan master controller Serial LED Driver\r\n");
+
+
+	if (argc != 4) {
+		printf("Usage: blueled deviceName messagefile fontfile\n\r");
+		printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
+		printf("        messagefile is the name of a file with the message to scroll\r\n");
+		printf("        Reads a series of display strings from stdin and pumps them to the LED display\r\n");
+		return(2);
+	}
+
+
+	printf("starting...\r\n");
 	
 	if (argc<2) {
 		printf("no device file speficied.\r\n");
-		
+		return(1);
 	}	
+
+	printf("opening..\r\n");
 	
 	fd = open(argv[1] , O_RDWR );
-	
+
+	printf("opened..\r\n");
+
+
 	if (fd == -1 ) {
 			printf("failed to open serial device %s\r\n", argv[1]);
 			return(1);
 	}
 	
-	printDebug("Success opening serial device %s\r\n");
+	D("Success opening serial device\r\n");
 	devArg = argv[1];
 	
-	if (argc == 3) {
-		
-		if (argv[2][0]=='-' && argv[2][1]=='C') {	// Fill a single Col
-			int c = atoi( argv[2] + 2 );
-      
-			clear();
-		
-			int start=c*10;
-			int end=start+10;
-			printf("Lighting col %d-%d...", start , end );
-			
-			for(int x=start; x< end;x++) {
-					for(int r=0;r<ROWS;r++) {
-							if (x>=0 && x<DISPLAY_COLS) {                    
-								dots[r][x] = 1;
-							}
-					}
-			}
-						
-			sendDots();
-			printf("done.\r\n");
-			exit(0);
-					
-		}
 	
-
-		if (argv[2][0]=='-' && argv[2][1]=='R') {	// Fill a single Col
-			int r = atoi( argv[2] + 2 );
-      
-			clear();
-		
-			printf("Lighting row %d...", r );
-
-			if (r>=0 && r<ROWS) {                    
-				for(int c=0; c<DISPLAY_COLS;c++) {
-					dots[r][c] = 1;
-				}
-			}
-						
-			sendDots();
-			printf("done.\r\n");
-			exit(0);
-					
-		}
-			
-	}
-	
-//	dumpFont();
-//	exit(0);
-
-	if (argc!=4) {
-		printf( "Usage: blueled deviceName messagefile fontfile\n\r");
-        printf(" Where: deviceName is the path to connected serial device (typically /dev/ttyXXXXX)\r\n");
-		printf("        messagefile is the name of a file with the message to scroll\r\n");
-        printf("        Reads a series of display strings from stdin and pumps them to the LED display\r\n");
-		return(2);
-	}
-	
-	printDebug("Reading font from %s....\r\n");
+	D("Reading font....\r\n");
 
 	chartype *font = importFont( argv[3] );
 	
@@ -752,12 +728,7 @@ int main(int argc, char **argv)
 		exit(5);
 	}
 
-	/*	
-	dumpFont( font );
-	exit(0);
-	*/
 	
-
 	char *prevMessage = (char *)malloc(1);		// Keep a copy of the previous message for smooth transitions
 	prevMessage[0]=0x00;
 	int prevWidth=0;
@@ -769,7 +740,7 @@ int main(int argc, char **argv)
 	
     while (1) {
 
-		printDebug("Opening Message file...\r\n");
+		D("Opening Message file...\r\n");
 
 		
 		FILE *f = fopen( argv[2] , "r");
@@ -787,7 +758,7 @@ int main(int argc, char **argv)
 		//Go backj to begining
 		fseek(f, 0L, SEEK_SET);
 		
-		printDebug("Mallocing memory....!\r\n");
+		D("Mallocing memory....!\r\n");
 		
 				
 		char *message = (char *)malloc( messageLen + 1 );			// Save room for null terminator
@@ -799,24 +770,28 @@ int main(int argc, char **argv)
 		} 
 		
 		
-		printDebug("Reading message...\r\n");
+		D("Reading message...\r\n");
 		
 		fread(message, 1 , messageLen , f );
 		message[messageLen]=0x00;						// Make null terminated string
 
 
-		printDebug("Closing message file...\r\n");
+		D("Closing message file...\r\n");
 		
 		fclose(f);
 
-		printDebug("Sizing width...\r\n");
+		D("Sizing width...\r\n");
 
 		pingRun=0;		// Only run ping once per cycle
         lag=1;          // Default normal scroll speed
 
+
+		D("width...");
+
 		// Dummy draw just to get the pixel width
 		int width = drawString( 0 , message , font );
-		
+		D("widtrh out...");
+
 		
 		// On the first frame of each pass, the 1st col of the message will be in the last col of the display
 		// On the last frame of each pass, the last col of the message will be in the last col of the display 
@@ -828,18 +803,23 @@ int main(int argc, char **argv)
 		// we always end with the last message col of the message on the last col of the display, so pick up from there using the previous message 
 		
 		
-		printDebug("Scrolling splice!\r\n");
+		D("Scrolling splice!\r\n");
 		
 		for( int s= DISPLAY_COLS-1; (s > 0) && ( s>= DISPLAY_COLS-width)  ; s-- ) {		// Keep drawing until the prev message is off the display or until the new message is fully on the display
+			D("clear...\r\n");
 			clear();
+			D("left...\r\n");
 			drawStringFillLeft( s , prevWidth , prevMessage , font );
+			D("string...\r\n");
 			drawString( s , message , font );
+			D("sendDots...\r\n");
 			sendDots();
+			D("splice...\r\n");
 		}
 		
 		// Ok, now we are past the end of the previous message, now scroll out just the new message
 		
-		printDebug("Scrolling new message!\r\n");
+		D("Scrolling new message!\r\n");
 
 		for(int s = 0 ; s >= (DISPLAY_COLS-width) ; s--) {		// Start of rightmost copy of message
 
