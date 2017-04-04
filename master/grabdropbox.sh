@@ -8,11 +8,18 @@ dbget () {
   
     TMPFILE=`mktemp`
     wget "$1" -O $TMPFILE
+
+	cat $TMPFILE
+read
      
     if [ $? -eq 0 ]      ## WGET success?
      then
        # atomically move the new file
        mv -f $TMPFILE /tmp/blueled/$2/message.txt
+
+echo "good $2 dir /tmp/blueled/$2/message.txt"
+cat  /tmp/blueled/$2/message.txt
+read
      else
        #delete any left over output file 
        rm $TMPFILE

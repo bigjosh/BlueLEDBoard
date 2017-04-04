@@ -1,0 +1,11 @@
+[Unit]
+Description=PageKite via Service Two
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python /usr/local/bin/pagekite.py
+Restart=on-abort
+User=pi
+
+[Install]
+WantedBy=multi-user.target
