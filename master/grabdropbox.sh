@@ -10,7 +10,7 @@ dbget () {
     wget "$1" -O $TMPFILE
 
 	cat $TMPFILE
-read
+
      
     if [ $? -eq 0 ]      ## WGET success?
      then
@@ -19,7 +19,7 @@ read
 
 echo "good $2 dir /tmp/blueled/$2/message.txt"
 cat  /tmp/blueled/$2/message.txt
-read
+
      else
        #delete any left over output file 
        rm $TMPFILE
